@@ -1,0 +1,142 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user preferences, TOTP 2FA metadata, and home currency settings.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "homeCurrency": { "type": "string", "minLength": 3, "maxLength": 3, "pattern": "^[A-Z]{3}$" },
+        "totpEnabled": { "type": "boolean" },
+        "totpSecret": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "dailyBudgetJpy": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "homeCurrency", "totpEnabled", "dailyBudgetJpy", "updatedAt"]
+    },
+    "VaultItem": {
+      "title": "VaultItem",
+      "description": "Client-side AES-256-GCM encrypted travel document envelope.",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "docType": { "type": "string", "enum": ["passport", "jrpass", "hotel", "insurance", "visa", "other"] },
+        "cipherTextB64": { "type": "string", "minLength": 8, "maxLength": 16000 },
+        "ivB64": { "type": "string", "minLength": 8, "maxLength": 64 },
+        "saltB64": { "type": "string", "minLength": 8, "maxLength": 64 },
+        "alg": { "type": "string", "enum": ["AES-GCM-256"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "label", "docType", "cipherTextB64", "ivB64", "saltB64", "alg", "createdAt", "updatedAt"]
+    },
+    "ExpenseRecord": {
+      "title": "ExpenseRecord",
+      "description": "User travel expense entry in JPY.",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "amountJpy": { "type": "number" },
+        "category": { "type": "string", "enum": ["food", "transit", "lodging", "sightseeing", "shopping"] },
+        "city": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "date": { "type": "string", "minLength": 10, "maxLength": 10 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "title", "amountJpy", "category", "city", "date", "createdAt", "updatedAt"]
+    },
+    "TripItinerary": {
+      "title": "TripItinerary",
+      "description": "Saved personalized Japan trip itinerary.",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "daysCount": { "type": "integer" },
+        "regions": { "type": "array" },
+        "planJson": { "type": "string", "minLength": 2, "maxLength": 50000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "title", "daysCount", "regions", "planJson", "createdAt", "updatedAt"]
+    },
+    "LearningProgress": {
+      "title": "LearningProgress",
+      "description": "Japanese study XP, mastered items, and streak progress.",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "masteredIds": { "type": "array" },
+        "xp": { "type": "integer" },
+        "streakDays": { "type": "integer" },
+        "completedLessons": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "masteredIds", "xp", "streakDays", "completedLessons", "updatedAt"]
+    },
+    "TravelReminder": {
+      "title": "TravelReminder",
+      "description": "Flight or Shinkansen alert schedule.",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "kind": { "type": "string", "enum": ["shinkansen", "flight", "ferry", "hotel"] },
+        "code": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "route": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "departureIso": { "type": "string", "minLength": 10, "maxLength": 40 },
+        "platformOrGate": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "kind", "code", "route", "departureIso", "platformOrGate", "createdAt", "updatedAt"]
+    },
+    "CommunityPost": {
+      "title": "CommunityPost",
+      "description": "Nearby traveler social board post without PII.",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "authorName": { "type": "string", "minLength": 1, "maxLength": 50 },
+        "city": { "type": "string", "enum": ["Tokyo", "Kyoto", "Osaka", "Sapporo", "Nara", "Kanazawa"] },
+        "category": { "type": "string", "enum": ["meetup", "tip", "crowd", "food"] },
+        "message": { "type": "string", "minLength": 3, "maxLength": 400 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorUid", "authorName", "city", "category", "message", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user settings and TOTP 2FA configuration."
+    },
+    "/users/{userId}/vaultItems/{itemId}": {
+      "schema": { "$ref": "#/entities/VaultItem" },
+      "description": "AES-256-GCM encrypted travel documents owned by the user."
+    },
+    "/users/{userId}/expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/ExpenseRecord" },
+      "description": "User travel expenses in JPY."
+    },
+    "/users/{userId}/itineraries/{itineraryId}": {
+      "schema": { "$ref": "#/entities/TripItinerary" },
+      "description": "Saved AI trip itineraries."
+    },
+    "/users/{userId}/learning/{progressId}": {
+      "schema": { "$ref": "#/entities/LearningProgress" },
+      "description": "User Japanese learning studio progress."
+    },
+    "/users/{userId}/reminders/{reminderId}": {
+      "schema": { "$ref": "#/entities/TravelReminder" },
+      "description": "User flight and Shinkansen departure alerts."
+    },
+    "/communityPosts/{postId}": {
+      "schema": { "$ref": "#/entities/CommunityPost" },
+      "description": "Publicly readable (signed-in) nearby traveler social board posts."
+    }
+  }
+}

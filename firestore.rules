@@ -1,0 +1,210 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'homeCurrency', 'totpEnabled', 'dailyBudgetJpy', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'homeCurrency', 'totpEnabled', 'totpSecret', 'dailyBudgetJpy', 'updatedAt'])
+        && data.uid is string && data.uid == userId && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80
+        && data.homeCurrency is string && data.homeCurrency.size() == 3 && data.homeCurrency.matches('^[A-Z]{3}$')
+        && data.totpEnabled is bool
+        && (!('totpSecret' in data) || (data.totpSecret is string && data.totpSecret.size() <= 128))
+        && data.dailyBudgetJpy is number && data.dailyBudgetJpy >= 1000 && data.dailyBudgetJpy <= 10000000
+        && data.updatedAt == request.time;
+    }
+
+    function isValidVaultItem(data, userId) {
+      return data.keys().hasAll(['ownerUid', 'label', 'docType', 'cipherTextB64', 'ivB64', 'saltB64', 'alg', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'label', 'docType', 'cipherTextB64', 'ivB64', 'saltB64', 'alg', 'createdAt', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid == userId && data.ownerUid == request.auth.uid
+        && data.label is string && data.label.size() >= 1 && data.label.size() <= 80
+        && data.docType in ['passport', 'jrpass', 'hotel', 'insurance', 'visa', 'other']
+        && data.cipherTextB64 is string && data.cipherTextB64.size() >= 8 && data.cipherTextB64.size() <= 16000
+        && data.ivB64 is string && data.ivB64.size() >= 8 && data.ivB64.size() <= 64
+        && data.saltB64 is string && data.saltB64.size() >= 8 && data.saltB64.size() <= 64
+        && data.alg == 'AES-GCM-256'
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidExpenseRecord(data, userId) {
+      return data.keys().hasAll(['ownerUid', 'title', 'amountJpy', 'category', 'city', 'date', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'title', 'amountJpy', 'category', 'city', 'date', 'createdAt', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid == userId && data.ownerUid == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 100
+        && data.amountJpy is number && data.amountJpy > 0 && data.amountJpy <= 50000000
+        && data.category in ['food', 'transit', 'lodging', 'sightseeing', 'shopping']
+        && data.city is string && data.city.size() >= 1 && data.city.size() <= 40
+        && data.date is string && data.date.size() == 10
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidTripItinerary(data, userId) {
+      return data.keys().hasAll(['ownerUid', 'title', 'daysCount', 'regions', 'planJson', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'title', 'daysCount', 'regions', 'planJson', 'createdAt', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid == userId && data.ownerUid == request.auth.uid
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 100
+        && data.daysCount is int && data.daysCount >= 1 && data.daysCount <= 30
+        && data.regions is list && data.regions.size() >= 1 && data.regions.size() <= 12 && data.regions[0] is string
+        && data.planJson is string && data.planJson.size() >= 2 && data.planJson.size() <= 50000
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidLearningProgress(data, userId) {
+      return data.keys().hasAll(['ownerUid', 'masteredIds', 'xp', 'streakDays', 'completedLessons', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'masteredIds', 'xp', 'streakDays', 'completedLessons', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid == userId && data.ownerUid == request.auth.uid
+        && data.masteredIds is list && data.masteredIds.size() <= 500
+        && (data.masteredIds.size() == 0 || data.masteredIds[0] is string)
+        && data.xp is int && data.xp >= 0 && data.xp <= 1000000
+        && data.streakDays is int && data.streakDays >= 0 && data.streakDays <= 3650
+        && data.completedLessons is int && data.completedLessons >= 0 && data.completedLessons <= 500
+        && data.updatedAt == request.time;
+    }
+
+    function isValidTravelReminder(data, userId) {
+      return data.keys().hasAll(['ownerUid', 'kind', 'code', 'route', 'departureIso', 'platformOrGate', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'kind', 'code', 'route', 'departureIso', 'platformOrGate', 'createdAt', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid == userId && data.ownerUid == request.auth.uid
+        && data.kind in ['shinkansen', 'flight', 'ferry', 'hotel']
+        && data.code is string && data.code.size() >= 1 && data.code.size() <= 40
+        && data.route is string && data.route.size() >= 1 && data.route.size() <= 100
+        && data.departureIso is string && data.departureIso.size() >= 10 && data.departureIso.size() <= 40
+        && data.platformOrGate is string && data.platformOrGate.size() >= 1 && data.platformOrGate.size() <= 40
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidCommunityPost(data) {
+      return data.keys().hasAll(['authorUid', 'authorName', 'city', 'category', 'message', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['authorUid', 'authorName', 'city', 'category', 'message', 'createdAt', 'updatedAt'])
+        && data.authorUid is string && data.authorUid == request.auth.uid
+        && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 50
+        && data.city in ['Tokyo', 'Kyoto', 'Osaka', 'Sapporo', 'Nara', 'Kanazawa']
+        && data.category in ['meetup', 'tip', 'crowd', 'food']
+        && data.message is string && data.message.size() >= 3 && data.message.size() <= 400
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow create: if isValidId(userId) && isVerified() && isOwner(userId) && isValidUserProfile(incoming(), userId);
+      allow update: if isValidId(userId) && isVerified() && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'homeCurrency', 'totpEnabled', 'totpSecret', 'dailyBudgetJpy', 'updatedAt']);
+      allow delete: if isValidId(userId) && isVerified() && isOwner(userId);
+
+      match /vaultItems/{itemId} {
+        allow get: if isValidId(userId) && isValidId(itemId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerUid == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(itemId) && isVerified() && isOwner(userId)
+          && isValidVaultItem(incoming(), userId) && incoming().createdAt == request.time;
+        allow update: if isValidId(userId) && isValidId(itemId) && isVerified() && isOwner(userId)
+          && isValidVaultItem(incoming(), userId)
+          && incoming().ownerUid == existing().ownerUid
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['label', 'docType', 'cipherTextB64', 'ivB64', 'saltB64', 'alg', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(itemId) && isVerified() && isOwner(userId);
+      }
+
+      match /expenses/{expenseId} {
+        allow get: if isValidId(userId) && isValidId(expenseId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerUid == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(expenseId) && isVerified() && isOwner(userId)
+          && isValidExpenseRecord(incoming(), userId) && incoming().createdAt == request.time;
+        allow update: if isValidId(userId) && isValidId(expenseId) && isVerified() && isOwner(userId)
+          && isValidExpenseRecord(incoming(), userId)
+          && incoming().ownerUid == existing().ownerUid
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'amountJpy', 'category', 'city', 'date', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(expenseId) && isVerified() && isOwner(userId);
+      }
+
+      match /itineraries/{itineraryId} {
+        allow get: if isValidId(userId) && isValidId(itineraryId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerUid == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(itineraryId) && isVerified() && isOwner(userId)
+          && isValidTripItinerary(incoming(), userId) && incoming().createdAt == request.time;
+        allow update: if isValidId(userId) && isValidId(itineraryId) && isVerified() && isOwner(userId)
+          && isValidTripItinerary(incoming(), userId)
+          && incoming().ownerUid == existing().ownerUid
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'daysCount', 'regions', 'planJson', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(itineraryId) && isVerified() && isOwner(userId);
+      }
+
+      match /learning/{progressId} {
+        allow get: if isValidId(userId) && isValidId(progressId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerUid == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(progressId) && isVerified() && isOwner(userId)
+          && isValidLearningProgress(incoming(), userId);
+        allow update: if isValidId(userId) && isValidId(progressId) && isVerified() && isOwner(userId)
+          && isValidLearningProgress(incoming(), userId)
+          && incoming().ownerUid == existing().ownerUid
+          && incoming().diff(existing()).affectedKeys().hasOnly(['masteredIds', 'xp', 'streakDays', 'completedLessons', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(progressId) && isVerified() && isOwner(userId);
+      }
+
+      match /reminders/{reminderId} {
+        allow get: if isValidId(userId) && isValidId(reminderId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerUid == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(reminderId) && isVerified() && isOwner(userId)
+          && isValidTravelReminder(incoming(), userId) && incoming().createdAt == request.time;
+        allow update: if isValidId(userId) && isValidId(reminderId) && isVerified() && isOwner(userId)
+          && isValidTravelReminder(incoming(), userId)
+          && incoming().ownerUid == existing().ownerUid
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['kind', 'code', 'route', 'departureIso', 'platformOrGate', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(reminderId) && isVerified() && isOwner(userId);
+      }
+    }
+
+    match /communityPosts/{postId} {
+      allow get: if isValidId(postId) && isSignedIn();
+      allow list: if isSignedIn() && resource.data.authorUid is string;
+      allow create: if isValidId(postId) && isVerified()
+        && isValidCommunityPost(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(postId) && isVerified()
+        && existing().authorUid == request.auth.uid
+        && isValidCommunityPost(incoming())
+        && incoming().authorUid == existing().authorUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['city', 'category', 'message', 'updatedAt']);
+      allow delete: if isValidId(postId) && isVerified() && existing().authorUid == request.auth.uid;
+    }
+  }
+}

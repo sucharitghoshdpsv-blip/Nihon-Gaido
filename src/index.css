@@ -1,0 +1,199 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Light Mode Defaults (Washi & Kinpaku) */
+  --bg-canvas: #f6f3ec;
+  --bg-ambient-1: rgba(212, 165, 58, 0.14);
+  --bg-ambient-2: rgba(45, 79, 128, 0.08);
+  --glass-bg: rgba(255, 253, 248, 0.76);
+  --glass-bg-elevated: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(24, 24, 27, 0.10);
+  --glass-highlight: rgba(255, 255, 255, 0.65);
+
+  --text-primary: #16181d;
+  --text-secondary: #4a4f5a;
+  --text-muted: #69707d;
+
+  --accent: #a67108;
+  --accent-strong: #8d5e04;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(166, 113, 8, 0.12);
+}
+
+.dark {
+  /* High-Contrast Gold on Deep Obsidian Lacquer */
+  --bg-canvas: #080a0f;
+  --bg-ambient-1: rgba(245, 196, 81, 0.14);
+  --bg-ambient-2: rgba(56, 108, 176, 0.12);
+  --glass-bg: rgba(17, 20, 29, 0.74);
+  --glass-bg-elevated: rgba(23, 27, 39, 0.86);
+  --glass-border: rgba(245, 196, 81, 0.22);
+  --glass-highlight: rgba(245, 196, 81, 0.10);
+
+  /* High-contrast warm gold-ivory body text */
+  --text-primary: #f9ebc4;
+  --text-secondary: #e2cc8f;
+  --text-muted: #bba365;
+
+  --accent: #f6c945;
+  --accent-strong: #ffd764;
+  --accent-ink: #090b10;
+  --accent-soft: rgba(246, 201, 69, 0.15);
+}
+
+/* Selectable Japanese Themes */
+[data-theme="aizome"]:not(.dark) {
+  --bg-canvas: #f2f5fa;
+  --bg-ambient-1: rgba(30, 64, 175, 0.11);
+  --bg-ambient-2: rgba(166, 113, 8, 0.08);
+  --accent: #1d4ed8;
+  --accent-strong: #1e40af;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(29, 78, 216, 0.11);
+}
+
+[data-theme="aizome"].dark {
+  --bg-canvas: #070b14;
+  --bg-ambient-1: rgba(96, 165, 250, 0.14);
+  --bg-ambient-2: rgba(245, 196, 81, 0.12);
+  --glass-bg: rgba(14, 21, 37, 0.76);
+  --glass-bg-elevated: rgba(19, 28, 48, 0.88);
+  --glass-border: rgba(245, 196, 81, 0.24);
+  --accent: #f6c945;
+  --accent-strong: #ffd764;
+  --accent-ink: #070b14;
+}
+
+[data-theme="sakura"]:not(.dark) {
+  --bg-canvas: #faf4f6;
+  --bg-ambient-1: rgba(190, 62, 102, 0.11);
+  --bg-ambient-2: rgba(180, 120, 40, 0.07);
+  --accent: #a63457;
+  --accent-strong: #882544;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(166, 52, 87, 0.11);
+}
+
+[data-theme="sakura"].dark {
+  --bg-canvas: #11090e;
+  --bg-ambient-1: rgba(244, 114, 182, 0.14);
+  --bg-ambient-2: rgba(245, 196, 81, 0.11);
+  --glass-bg: rgba(27, 15, 22, 0.76);
+  --glass-bg-elevated: rgba(36, 20, 29, 0.88);
+  --glass-border: rgba(245, 196, 81, 0.24);
+  --accent: #f6c945;
+  --accent-strong: #ffd764;
+  --accent-ink: #11090e;
+}
+
+[data-theme="take"]:not(.dark) {
+  --bg-canvas: #f2f6f3;
+  --bg-ambient-1: rgba(22, 101, 52, 0.11);
+  --bg-ambient-2: rgba(166, 113, 8, 0.08);
+  --accent: #166534;
+  --accent-strong: #14532d;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(22, 101, 52, 0.11);
+}
+
+[data-theme="take"].dark {
+  --bg-canvas: #07100c;
+  --bg-ambient-1: rgba(52, 211, 153, 0.13);
+  --bg-ambient-2: rgba(245, 196, 81, 0.12);
+  --glass-bg: rgba(12, 24, 19, 0.76);
+  --glass-bg-elevated: rgba(17, 33, 26, 0.88);
+  --glass-border: rgba(245, 196, 81, 0.24);
+  --accent: #f6c945;
+  --accent-strong: #ffd764;
+  --accent-ink: #07100c;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    background-image:
+      radial-gradient(ellipse 75% 55% at 12% 0%, var(--bg-ambient-1), transparent 70%),
+      radial-gradient(ellipse 65% 50% at 88% 15%, var(--bg-ambient-2), transparent 70%);
+    background-attachment: fixed;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 200ms cubic-bezier(0.16, 1, 0.3, 1), color 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  .font-mono, .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  .dark select option {
+    background-color: #131722;
+    color: #f9ebc4;
+  }
+}
+
+.liquid-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight);
+}
+
+.liquid-glass-elevated {
+  background: var(--glass-bg-elevated);
+  backdrop-filter: blur(24px) saturate(155%);
+  -webkit-backdrop-filter: blur(24px) saturate(155%);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    0 18px 40px -18px rgba(0, 0, 0, 0.35);
+}
+
+.text-primary-token {
+  color: var(--text-primary);
+}
+.text-secondary-token {
+  color: var(--text-secondary);
+}
+.text-muted-token {
+  color: var(--text-muted);
+}
+.bg-accent-token {
+  background-color: var(--accent);
+  color: var(--accent-ink);
+}
+.bg-accent-token:hover {
+  background-color: var(--accent-strong);
+}
+.text-accent-token {
+  color: var(--accent);
+}
+.bg-accent-soft-token {
+  background-color: var(--accent-soft);
+}
+.border-accent-token {
+  border-color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

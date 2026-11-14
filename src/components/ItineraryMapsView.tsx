@@ -16,6 +16,7 @@ import {
   type ItineraryPlan,
 } from '../data/japanData';
 import { convertFromJpy, formatCurrencyAmount, formatJpy } from '../utils/currency';
+import { GoogleJapanMap } from './GoogleJapanMap';
 
 interface ItineraryMapsViewProps {
   itinerary: ItineraryPlan;
@@ -105,6 +106,31 @@ export const ItineraryMapsView: React.FC<ItineraryMapsViewProps> = ({
 
   return (
     <div className="space-y-8">
+      {/* Live Google Maps Platform & Places Explorer */}
+      <section className="liquid-glass rounded-2xl p-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-display text-xl font-semibold text-primary-token">
+              Live Google Maps &amp; Japan Place Finder
+            </h2>
+            <p className="text-xs text-muted-token">
+              Interactive vector map with live Places API (New) discovery around {selectedCity.id}.
+            </p>
+          </div>
+          <span className="text-xs font-mono text-accent-token">
+            {selectedCity.id} · {selectedCity.japaneseName}
+          </span>
+        </div>
+
+        <GoogleJapanMap
+          selectedCity={selectedCity}
+          onSelectCity={(city) => {
+            onSelectCity(city);
+            setActiveLandmark(city.landmarks[0]);
+          }}
+        />
+      </section>
+
       {/* Interactive Japan Map + Offline Region Pack */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         <div className="lg:col-span-6 liquid-glass rounded-2xl p-6 flex flex-col justify-between gap-4">

@@ -194,7 +194,7 @@ service cloud.firestore {
 
     match /communityPosts/{postId} {
       allow get: if isValidId(postId) && isSignedIn();
-      allow list: if isSignedIn() && resource.data.authorUid is string;
+      allow list: if isSignedIn() && request.query.limit <= 100;
       allow create: if isValidId(postId) && isVerified()
         && isValidCommunityPost(incoming())
         && incoming().createdAt == request.time;

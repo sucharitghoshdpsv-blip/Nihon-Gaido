@@ -42,6 +42,7 @@ export interface CityGuide {
   transitHub: string;
   offlineSizeMb: number;
   mapCoords: { x: number; y: number };
+  geoCenter: { lat: number; lng: number };
   landmarks: DistrictLandmark[];
 }
 
@@ -68,6 +69,7 @@ export const CITY_GUIDES: CityGuide[] = [
     transitHub: 'Tokyo Station · Yamanote & Shinkansen Hub',
     offlineSizeMb: 42,
     mapCoords: { x: 268, y: 238 },
+    geoCenter: { lat: 35.6762, lng: 139.6503 },
     landmarks: [
       { id: 'tyo-1', name: 'Meiji Jingu Forest', japanese: '明治神宮', kind: 'shrine', estimatedJpy: 0, xPct: 28, yPct: 35, note: 'Bow once before entering the cypress torii gate.' },
       { id: 'tyo-2', name: 'Shibuya Sky & Crossing', japanese: '渋谷スクランブル', kind: 'transit', estimatedJpy: 2200, xPct: 45, yPct: 58, note: 'Book sunset entry 2 weeks ahead; no tripods on deck.' },
@@ -95,6 +97,7 @@ export const CITY_GUIDES: CityGuide[] = [
     transitHub: 'Kyoto Station · Karasuma & JR Sagano Lines',
     offlineSizeMb: 38,
     mapCoords: { x: 208, y: 262 },
+    geoCenter: { lat: 35.0116, lng: 135.7681 },
     landmarks: [
       { id: 'kyo-1', name: 'Arashiyama Bamboo Grove', japanese: '嵐山竹林', kind: 'park', estimatedJpy: 0, xPct: 22, yPct: 42, note: 'Arrive at 06:30 for quiet mist and uncluttered light.' },
       { id: 'kyo-2', name: 'Kiyomizu-dera Terrace', japanese: '清水寺', kind: 'shrine', estimatedJpy: 500, xPct: 76, yPct: 56, note: 'Wooden stage built without nails overlooking Higashiyama.' },
@@ -122,6 +125,7 @@ export const CITY_GUIDES: CityGuide[] = [
     transitHub: 'Shin-Osaka & Namba Station',
     offlineSizeMb: 34,
     mapCoords: { x: 196, y: 274 },
+    geoCenter: { lat: 34.6937, lng: 135.5023 },
     landmarks: [
       { id: 'osa-1', name: 'Kuromon Ichiba Market', japanese: '黒門市場', kind: 'market', estimatedJpy: 2500, xPct: 58, yPct: 54, note: 'Fresh sea urchin, grilled scallops, and wagyu skewers.' },
       { id: 'osa-2', name: 'Hozenji Yokocho Alley', japanese: '法善寺横丁', kind: 'shrine', estimatedJpy: 0, xPct: 45, yPct: 42, note: 'Splash water gently on the moss-covered Fudo Myoo statue.' },
@@ -149,6 +153,7 @@ export const CITY_GUIDES: CityGuide[] = [
     transitHub: 'JR Sapporo Station · Rapid Airport Line',
     offlineSizeMb: 31,
     mapCoords: { x: 312, y: 84 },
+    geoCenter: { lat: 43.0618, lng: 141.3545 },
     landmarks: [
       { id: 'sap-1', name: 'Odori Park & TV Tower', japanese: '大通公園', kind: 'park', estimatedJpy: 1000, xPct: 48, yPct: 46, note: '1.5 km green spine anchoring Sapporo festivals.' },
       { id: 'sap-2', name: 'Nijo Seafood Market', japanese: '二条市場', kind: 'market', estimatedJpy: 2600, xPct: 66, yPct: 50, note: 'Morning kaisen-don bowls with Hokkaido uni and crab.' },
@@ -176,6 +181,7 @@ export const CITY_GUIDES: CityGuide[] = [
     transitHub: 'Kintetsu-Nara & JR Nara Station',
     offlineSizeMb: 22,
     mapCoords: { x: 215, y: 280 },
+    geoCenter: { lat: 34.6851, lng: 135.8048 },
     landmarks: [
       { id: 'nar-1', name: 'Todai-ji Great Buddha', japanese: '東大寺', kind: 'shrine', estimatedJpy: 800, xPct: 58, yPct: 35, note: 'World’s largest historic wooden hall housing Daibutsu.' },
       { id: 'nar-2', name: 'Kasuga Taisha Lanterns', japanese: '春日大社', kind: 'shrine', estimatedJpy: 500, xPct: 78, yPct: 55, note: 'Three thousand moss-draped stone and bronze lanterns.' },
@@ -202,6 +208,7 @@ export const CITY_GUIDES: CityGuide[] = [
     transitHub: 'JR Kanazawa Station · Tsuzumi-mon Gate',
     offlineSizeMb: 26,
     mapCoords: { x: 218, y: 210 },
+    geoCenter: { lat: 36.5613, lng: 136.6562 },
     landmarks: [
       { id: 'kan-1', name: 'Kenroku-en Garden', japanese: '兼六園', kind: 'park', estimatedJpy: 320, xPct: 56, yPct: 58, note: 'One of Japan’s Three Great Gardens with winter yukitsuri pine ropes.' },
       { id: 'kan-2', name: 'Higashi Chaya District', japanese: 'ひがし茶屋街', kind: 'dining', estimatedJpy: 1800, xPct: 74, yPct: 34, note: 'Edo-era wooden teahouses and gold-leaf wagashi sweets.' },

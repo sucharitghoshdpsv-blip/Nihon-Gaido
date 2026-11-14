@@ -10,11 +10,13 @@ import {
   collection,
   deleteDoc,
   doc,
+  limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
+  where,
 } from 'firebase/firestore';
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import {
@@ -108,6 +110,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [firestoreStatus, setFirestoreStatus] = useState<'online' | 'offline'>('online');
   const [authNotice, setAuthNotice] = useState<string | null>(null);
+  const [gmpQuotaExceeded, setGmpQuotaExceeded] = useState(false);
 
   // FX & Currency state
   const [homeCurrency, setHomeCurrency] = useState<string>(() =>
@@ -241,19 +244,30 @@ export default function App() {
     return () => unsub();
   }, []);
 
+  // Google Maps Case A Demo Key quota warning listener at top-level App context
+  useEffect(() => {
+    const onQuotaExceeded = () => setGmpQuotaExceeded(true);
+    window.addEventListener('gmp-quota-exceeded', onQuotaExceeded);
+    return () => window.removeEventListener('gmp-quota-exceeded', onQuotaExceeded);
+  }, []);
+
   // Firestore real-time listeners when authenticated
   useEffect(() => {
     if (!authReady || !user) return;
+
+    const safeBudget = Math.min(10000000, Math.max(1000, Math.round(Number(dailyBudgetJpy) || 18000)));
+    const safeCurrency = /^[A-Z]{3}$/.test(homeCurrency) ? homeCurrency : 'USD';
+    const safeDisplayName = (user.displayName || 'Traveler').trim().slice(0, 80) || 'Traveler';
 
     const profileRef = doc(db, 'users', user.uid);
     setDoc(
       profileRef,
       {
         uid: user.uid,
-        displayName: user.displayName || 'Traveler',
-        homeCurrency,
+        displayName: safeDisplayName,
+        homeCurrency: safeCurrency,
         totpEnabled: totpVerified,
-        dailyBudgetJpy,
+        dailyBudgetJpy: safeBudget,
         updatedAt: serverTimestamp(),
       },
       { merge: true }
@@ -261,7 +275,7 @@ export default function App() {
 
     const expensesPath = `users/${user.uid}/expenses`;
     const unsubExpenses = onSnapshot(
-      collection(db, expensesPath),
+      query(collection(db, expensesPath), where('ownerUid', '==', user.uid)),
       (snap) => {
         if (!snap.empty) {
           const loaded = snap.docs.map((d) => {
@@ -284,7 +298,7 @@ export default function App() {
 
     const vaultPath = `users/${user.uid}/vaultItems`;
     const unsubVault = onSnapshot(
-      collection(db, vaultPath),
+      query(collection(db, vaultPath), where('ownerUid', '==', user.uid)),
       (snap) => {
         const loaded = snap.docs.map((d) => {
           const data = d.data();
@@ -306,9 +320,31 @@ export default function App() {
       (err) => handleFirestoreError(err, OperationType.LIST, vaultPath)
     );
 
+    const remindersPath = `users/${user.uid}/reminders`;
+    const unsubReminders = onSnapshot(
+      query(collection(db, remindersPath), where('ownerUid', '==', user.uid)),
+      (snap) => {
+        if (!snap.empty) {
+          const loaded = snap.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              kind: data.kind || 'shinkansen',
+              code: String(data.code || ''),
+              route: String(data.route || ''),
+              departureIso: String(data.departureIso || ''),
+              platformOrGate: String(data.platformOrGate || ''),
+            } as TravelReminderItem;
+          });
+          setReminders(loaded);
+        }
+      },
+      (err) => handleFirestoreError(err, OperationType.LIST, remindersPath)
+    );
+
     const postsPath = 'communityPosts';
     const unsubPosts = onSnapshot(
-      query(collection(db, postsPath), orderBy('createdAt', 'desc')),
+      query(collection(db, postsPath), orderBy('createdAt', 'desc'), limit(50)),
       (snap) => {
         if (!snap.empty) {
           const loaded = snap.docs.map((d) => {
@@ -332,6 +368,7 @@ export default function App() {
     return () => {
       unsubExpenses();
       unsubVault();
+      unsubReminders();
       unsubPosts();
     };
   }, [authReady, user]);
@@ -574,6 +611,23 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {gmpQuotaExceeded && (
+        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2.5 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm">
+          <span>
+            Google Maps Platform quota reached. If you are the app owner, visit{' '}
+            <a
+              href="https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-semibold text-amber-950 hover:text-amber-800"
+            >
+              maps developer site
+            </a>{' '}
+            for instructions to update your account.
+          </span>
+        </div>
+      )}
+
       {/* Strict 3-Zone Top Bar */}
       <header className="sticky top-0 z-30 liquid-glass border-b border-black/10 dark:border-amber-200/15">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-8">

@@ -98,6 +98,13 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'TabiGuide API' });
 });
 
+// Client Maps key bootstrap fallback when runtime secrets inject GOOGLE_MAPS_API_KEY without VITE_ prefix
+app.get('/api/maps/config', (_req, res) => {
+  const raw = process.env.VITE_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
+  const apiKey = raw === 'MY_GOOGLE_MAPS_API_KEY' ? '' : raw;
+  res.json({ apiKey });
+});
+
 // Nuance-aware Japanese <-> English Translator (gemini-4-carbon + ThinkingLevel.HIGH)
 app.post('/api/gemini/translate', async (req, res) => {
   try {

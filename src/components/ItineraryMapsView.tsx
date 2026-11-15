@@ -17,6 +17,7 @@ import {
 } from '../data/japanData';
 import { convertFromJpy, formatCurrencyAmount, formatJpy } from '../utils/currency';
 import { GoogleJapanMap } from './GoogleJapanMap';
+import { GoogleTasksPanel } from './GoogleTasksPanel';
 
 interface ItineraryMapsViewProps {
   itinerary: ItineraryPlan;
@@ -27,6 +28,9 @@ interface ItineraryMapsViewProps {
   onSelectCity: (city: CityGuide) => void;
   homeCurrency: string;
   rates: Record<string, number>;
+  workspaceToken: string | null;
+  onConnectGoogleWorkspace: () => Promise<void>;
+  onWorkspaceTokenExpired: () => void;
 }
 
 const INTEREST_OPTIONS = [
@@ -46,6 +50,9 @@ export const ItineraryMapsView: React.FC<ItineraryMapsViewProps> = ({
   onSelectCity,
   homeCurrency,
   rates,
+  workspaceToken,
+  onConnectGoogleWorkspace,
+  onWorkspaceTokenExpired,
 }) => {
   const [daysCount, setDaysCount] = useState(3);
   const [pace, setPace] = useState<'relaxed' | 'balanced' | 'packed'>('balanced');
@@ -530,6 +537,15 @@ export const ItineraryMapsView: React.FC<ItineraryMapsViewProps> = ({
           })}
         </div>
       </section>
+
+      {/* Google Tasks Trip Checklist Integration */}
+      <GoogleTasksPanel
+        workspaceToken={workspaceToken}
+        onConnectGoogle={onConnectGoogleWorkspace}
+        onTokenExpired={onWorkspaceTokenExpired}
+        selectedCity={selectedCity}
+        itinerary={itinerary}
+      />
     </div>
   );
 };

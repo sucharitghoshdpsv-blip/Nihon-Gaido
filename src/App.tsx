@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   onAuthStateChanged,
-  signInWithPopup,
   signOut,
   type User,
 } from 'firebase/auth';
@@ -21,8 +20,9 @@ import {
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import {
   auth,
+  clearWorkspaceAccessToken,
   db,
-  googleProvider,
+  googleSignInWithWorkspace,
   handleFirestoreError,
   OperationType,
   testFirestoreConnection,
@@ -58,9 +58,15 @@ import {
   SafetyVaultView,
   type StoredVaultRecord,
 } from './components/SafetyVaultView';
+import { CustomerCareView } from './components/CustomerCareView';
+import {
+  buildSupportTicketRef,
+  type SupportTicketItem,
+  type SupportTicketStatus,
+} from './utils/support';
 import { EtiquetteOverlay } from './components/EtiquetteOverlay';
 
-type AppSection = 'explore' | 'learn' | 'itinerary' | 'budget' | 'safety';
+type AppSection = 'explore' | 'learn' | 'itinerary' | 'budget' | 'safety' | 'support';
 
 const STORAGE_KEYS = {
   theme: 'tabiguide_theme',
@@ -77,6 +83,7 @@ const STORAGE_KEYS = {
   community: 'tabiguide_community',
   vault: 'tabiguide_vault_local',
   totpSecret: 'tabiguide_totp_secret',
+  supportTickets: 'tabiguide_support_tickets',
 };
 
 function readStorage<T>(key: string, fallback: T): T {
@@ -108,6 +115,7 @@ export default function App() {
   // Firebase Auth & Firestore connection state
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [workspaceToken, setWorkspaceToken] = useState<string | null>(null);
   const [firestoreStatus, setFirestoreStatus] = useState<'online' | 'offline'>('online');
   const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [gmpQuotaExceeded, setGmpQuotaExceeded] = useState(false);
@@ -167,6 +175,9 @@ export default function App() {
     return generated;
   });
   const [totpVerified, setTotpVerified] = useState(false);
+  const [supportTickets, setSupportTickets] = useState<SupportTicketItem[]>(() =>
+    readStorage<SupportTicketItem[]>(STORAGE_KEYS.supportTickets, [])
+  );
 
   // Sync theme & dark class on <html>
   useEffect(() => {
@@ -215,6 +226,9 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.totpSecret, totpSecret);
   }, [totpSecret]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.supportTickets, JSON.stringify(supportTickets));
+  }, [supportTickets]);
 
   // Live FX rates bootstrap & refresh
   const handleRefreshRates = async () => {
@@ -239,6 +253,10 @@ export default function App() {
     testFirestoreConnection().then(setFirestoreStatus);
     const unsub = onAuthStateChanged(auth, (nextUser) => {
       setUser(nextUser);
+      if (!nextUser) {
+        clearWorkspaceAccessToken();
+        setWorkspaceToken(null);
+      }
       setAuthReady(true);
     });
     return () => unsub();
@@ -365,11 +383,41 @@ export default function App() {
       (err) => handleFirestoreError(err, OperationType.LIST, postsPath)
     );
 
+    const ticketsPath = `users/${user.uid}/supportTickets`;
+    const unsubTickets = onSnapshot(
+      query(collection(db, ticketsPath), where('ownerUid', '==', user.uid)),
+      (snap) => {
+        if (!snap.empty) {
+          const loaded = snap.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              ticketRef: String(data.ticketRef || buildSupportTicketRef(d.id)),
+              category: data.category || 'other',
+              severity: data.severity || 'medium',
+              area: data.area || 'explore',
+              subject: String(data.subject || ''),
+              description: String(data.description || ''),
+              contactEmail: String(data.contactEmail || ''),
+              cityContext: String(data.cityContext || 'Tokyo'),
+              diagnostics: String(data.diagnostics || ''),
+              status: data.status || 'open',
+              resolutionNote: String(data.resolutionNote || ''),
+              createdAtLabel: 'Synced',
+            } as SupportTicketItem;
+          });
+          setSupportTickets(loaded);
+        }
+      },
+      (err) => handleFirestoreError(err, OperationType.LIST, ticketsPath)
+    );
+
     return () => {
       unsubExpenses();
       unsubVault();
       unsubReminders();
       unsubPosts();
+      unsubTickets();
     };
   }, [authReady, user]);
 
@@ -396,13 +444,16 @@ export default function App() {
   const handleSignIn = async () => {
     setAuthNotice(null);
     try {
-      await signInWithPopup(auth, googleProvider);
+      const res = await googleSignInWithWorkspace();
+      setWorkspaceToken(res.accessToken);
     } catch (err: unknown) {
       setAuthNotice(err instanceof Error ? err.message : 'Google sign-in cancelled.');
     }
   };
 
   const handleSignOut = async () => {
+    clearWorkspaceAccessToken();
+    setWorkspaceToken(null);
     await signOut(auth);
   };
 
@@ -601,16 +652,100 @@ export default function App() {
     }
   };
 
+  const handleSubmitSupportTicket = async (
+    ticket: Omit<SupportTicketItem, 'id' | 'ticketRef' | 'status' | 'resolutionNote' | 'createdAtLabel'>
+  ): Promise<SupportTicketItem> => {
+    const id = `sup-${Date.now()}`;
+    const ticketRef = buildSupportTicketRef(id);
+    const created: SupportTicketItem = {
+      ...ticket,
+      id,
+      ticketRef,
+      status: 'open',
+      resolutionNote: '',
+      createdAtLabel: user ? 'Synced' : 'Just now',
+    };
+    setSupportTickets((prev) => [created, ...prev]);
+
+    if (user) {
+      const path = `users/${user.uid}/supportTickets/${id}`;
+      try {
+        await setDoc(doc(db, `users/${user.uid}/supportTickets`, id), {
+          ownerUid: user.uid,
+          ticketRef,
+          category: ticket.category,
+          severity: ticket.severity,
+          area: ticket.area,
+          subject: ticket.subject.slice(0, 100),
+          description: ticket.description.slice(0, 1000),
+          contactEmail: ticket.contactEmail.slice(0, 160),
+          cityContext: ticket.cityContext.slice(0, 40),
+          diagnostics: ticket.diagnostics.slice(0, 400),
+          status: 'open',
+          resolutionNote: '',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, path);
+      }
+    }
+    return created;
+  };
+
+  const handleUpdateSupportTicketStatus = async (
+    id: string,
+    status: SupportTicketStatus,
+    resolutionNote = ''
+  ) => {
+    setSupportTickets((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status, resolutionNote } : t))
+    );
+    if (user) {
+      const path = `users/${user.uid}/supportTickets/${id}`;
+      try {
+        await setDoc(
+          doc(db, `users/${user.uid}/supportTickets`, id),
+          {
+            status,
+            resolutionNote: resolutionNote.slice(0, 500),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, path);
+      }
+    }
+  };
+
+  const handleDeleteSupportTicket = async (id: string) => {
+    setSupportTickets((prev) => prev.filter((t) => t.id !== id));
+    if (user) {
+      try {
+        await deleteDoc(doc(db, `users/${user.uid}/supportTickets`, id));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/supportTickets/${id}`);
+      }
+    }
+  };
+
   const navItems: Array<{ id: AppSection; label: string }> = [
     { id: 'explore', label: 'Explore' },
     { id: 'learn', label: 'Learn' },
     { id: 'itinerary', label: 'Itinerary' },
     { id: 'budget', label: 'Budget' },
     { id: 'safety', label: 'Safety & Vault' },
+    { id: 'support', label: 'Support' },
   ];
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col relative isolate">
+      <div className="tabi-live-bg" aria-hidden="true">
+        <div className="tabi-live-orb tabi-live-orb-1" />
+        <div className="tabi-live-orb tabi-live-orb-2" />
+        <div className="tabi-live-orb tabi-live-orb-3" />
+      </div>
       {gmpQuotaExceeded && (
         <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2.5 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm">
           <span>
@@ -843,6 +978,12 @@ export default function App() {
                 onSelectCity={handleSelectCity}
                 homeCurrency={homeCurrency}
                 rates={rateSnapshot.rates}
+                workspaceToken={workspaceToken}
+                onConnectGoogleWorkspace={handleSignIn}
+                onWorkspaceTokenExpired={() => {
+                  clearWorkspaceAccessToken();
+                  setWorkspaceToken(null);
+                }}
               />
             )}
             {activeSection === 'budget' && (
@@ -883,6 +1024,18 @@ export default function App() {
                 }}
               />
             )}
+            {activeSection === 'support' && (
+              <CustomerCareView
+                user={user}
+                selectedCity={selectedCity}
+                themeId={themeId}
+                isDarkMode={isDarkMode}
+                tickets={supportTickets}
+                onSubmitTicket={handleSubmitSupportTicket}
+                onUpdateTicketStatus={handleUpdateSupportTicketStatus}
+                onDeleteTicket={handleDeleteSupportTicket}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -897,7 +1050,19 @@ export default function App() {
       <footer className="border-t border-black/10 dark:border-amber-200/15 py-6 mt-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-token">
           <span>TabiGuide · Japan Cultural Companion & Encrypted Trip Studio</span>
-          <span>Offline Firestore Cache Active · Web Crypto AES-256-GCM</span>
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                handleNavigate('support');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="text-accent-token hover:underline font-medium"
+            >
+              Customer Care · Report an Issue
+            </button>
+            <span>Offline Firestore Cache Active · Web Crypto AES-256-GCM</span>
+          </div>
         </div>
       </footer>
     </div>

@@ -46,7 +46,7 @@ export interface CityGuide {
   landmarks: DistrictLandmark[];
 }
 
-export const HERO_IMAGE_URL = '/src/assets/images/hero_japan_twilight_1794670215092.jpg';
+export const HERO_IMAGE_URL = '/images/hero_japan_twilight_1794670215092.jpg';
 
 export const CITY_GUIDES: CityGuide[] = [
   {
@@ -54,7 +54,7 @@ export const CITY_GUIDES: CityGuide[] = [
     district: 'Shibuya & Yanaka',
     japaneseName: '東京 · 渋谷',
     regionLabel: 'Kanto',
-    imageUrl: '/src/assets/images/city_tokyo_shibuya_1794670214672.jpg',
+    imageUrl: '/images/city_tokyo_shibuya_1794670214672.jpg',
     headline: 'Neon precision meets quiet cedar alleyways',
     culturalInsight:
       'Tokyo runs on silent choreography. Neighborhoods shift tone within two blocks: Shinjuku towers give way to quiet kissaten coffee counters where whispering is preferred.',
@@ -82,7 +82,7 @@ export const CITY_GUIDES: CityGuide[] = [
     district: 'Gion & Arashiyama',
     japaneseName: '京都 · 祇園',
     regionLabel: 'Kansai',
-    imageUrl: '/src/assets/images/city_kyoto_arashiyama_1794670217427.jpg',
+    imageUrl: '/images/city_kyoto_arashiyama_1794670217427.jpg',
     headline: 'Moss gardens, machiya lattices, and ritual stillness',
     culturalInsight:
       'Kyoto preserves living artisan lineages—matcha millers, incense blenders, and wooden machiya townhouses. Early mornings before 08:00 reveal stone lanes nearly empty.',
@@ -110,7 +110,7 @@ export const CITY_GUIDES: CityGuide[] = [
     district: 'Dotonbori & Shinsekai',
     japaneseName: '大阪 · 道頓堀',
     regionLabel: 'Kansai',
-    imageUrl: '/src/assets/images/city_osaka_dotonbori_1794670216998.jpg',
+    imageUrl: '/images/city_osaka_dotonbori_1794670216998.jpg',
     headline: 'Kuidaore kitchens, warm banter, and canal lanterns',
     culturalInsight:
       'Osaka’s motto is kuidaore—"eat until you drop." Unlike Tokyo’s reserved cadence, Osaka counter chefs welcome warm banter and local Kansai-ben greetings like "Ookini!"',
@@ -138,7 +138,7 @@ export const CITY_GUIDES: CityGuide[] = [
     district: 'Odori & Jozankei Onsen',
     japaneseName: '札幌 · 大通',
     regionLabel: 'Hokkaido',
-    imageUrl: '/src/assets/images/city_hokkaido_winter_1794670217421.jpg',
+    imageUrl: '/images/city_hokkaido_winter_1794670217421.jpg',
     headline: 'Volcanic hot springs, miso broth, and alpine air',
     culturalInsight:
       'Hokkaido’s grid-laid capital pairs underground winter arcades with steaming cedar onsen valleys just 50 minutes south in Jozankei.',
@@ -166,7 +166,7 @@ export const CITY_GUIDES: CityGuide[] = [
     district: 'Nara Park & Naramachi',
     japaneseName: '奈良 · 奈良公園',
     regionLabel: 'Kansai',
-    imageUrl: '/src/assets/images/city_kyoto_arashiyama_1794670217427.jpg',
+    imageUrl: '/images/city_nara_park_1794762230326.jpg',
     headline: 'Eighth-century bronze halls and bowing sacred deer',
     culturalInsight:
       'Japan’s first permanent capital preserves monumental cedar halls like Todai-ji alongside quiet merchant townhouses in Naramachi.',
@@ -193,7 +193,7 @@ export const CITY_GUIDES: CityGuide[] = [
     district: 'Higashi Chaya & Kenroku-en',
     japaneseName: '金沢 · ひがし茶屋街',
     regionLabel: 'Hokuriku',
-    imageUrl: '/src/assets/images/hero_japan_twilight_1794670215092.jpg',
+    imageUrl: '/images/city_kanazawa_garden_1794762230854.jpg',
     headline: 'Gold-leaf ateliers, samurai gardens, and winter crab',
     culturalInsight:
       'Kanazawa produces 99% of Japan’s Kinpaku gold leaf. Unscathed in WWII, its teahouse districts and Omicho seafood stalls feel deeply tactile.',

@@ -118,6 +118,25 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    function isValidSupportTicket(data, userId) {
+      return data.keys().hasAll(['ownerUid', 'ticketRef', 'category', 'severity', 'area', 'subject', 'description', 'contactEmail', 'cityContext', 'diagnostics', 'status', 'resolutionNote', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'ticketRef', 'category', 'severity', 'area', 'subject', 'description', 'contactEmail', 'cityContext', 'diagnostics', 'status', 'resolutionNote', 'createdAt', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid == userId && data.ownerUid == request.auth.uid
+        && data.ticketRef is string && data.ticketRef.size() >= 4 && data.ticketRef.size() <= 20
+        && data.category in ['bug', 'translation', 'maps', 'budget', 'account', 'content', 'other']
+        && data.severity in ['low', 'medium', 'high', 'urgent']
+        && data.area in ['explore', 'learn', 'itinerary', 'budget', 'safety', 'published']
+        && data.subject is string && data.subject.size() >= 3 && data.subject.size() <= 100
+        && data.description is string && data.description.size() >= 10 && data.description.size() <= 1000
+        && data.contactEmail is string && data.contactEmail.size() <= 160
+        && data.cityContext is string && data.cityContext.size() >= 1 && data.cityContext.size() <= 40
+        && data.diagnostics is string && data.diagnostics.size() <= 400
+        && data.status in ['open', 'in_review', 'resolved']
+        && data.resolutionNote is string && data.resolutionNote.size() <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
     match /users/{userId} {
       allow get: if isValidId(userId) && isOwner(userId);
       allow create: if isValidId(userId) && isVerified() && isOwner(userId) && isValidUserProfile(incoming(), userId);
@@ -189,6 +208,20 @@ service cloud.firestore {
           && incoming().createdAt == existing().createdAt
           && incoming().diff(existing()).affectedKeys().hasOnly(['kind', 'code', 'route', 'departureIso', 'platformOrGate', 'updatedAt']);
         allow delete: if isValidId(userId) && isValidId(reminderId) && isVerified() && isOwner(userId);
+      }
+
+      match /supportTickets/{ticketId} {
+        allow get: if isValidId(userId) && isValidId(ticketId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerUid == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(ticketId) && isVerified() && isOwner(userId)
+          && isValidSupportTicket(incoming(), userId) && incoming().createdAt == request.time;
+        allow update: if isValidId(userId) && isValidId(ticketId) && isVerified() && isOwner(userId)
+          && isValidSupportTicket(incoming(), userId)
+          && incoming().ownerUid == existing().ownerUid
+          && incoming().ticketRef == existing().ticketRef
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'resolutionNote', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(ticketId) && isVerified() && isOwner(userId);
       }
     }
 

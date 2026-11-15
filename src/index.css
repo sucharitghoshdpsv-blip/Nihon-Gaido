@@ -7,33 +7,37 @@
   --font-mono: 'JetBrains Mono', monospace;
 
   /* Light Mode Defaults (Washi & Kinpaku) */
-  --bg-canvas: #f6f3ec;
-  --bg-ambient-1: rgba(212, 165, 58, 0.14);
-  --bg-ambient-2: rgba(45, 79, 128, 0.08);
-  --glass-bg: rgba(255, 253, 248, 0.76);
-  --glass-bg-elevated: rgba(255, 255, 255, 0.88);
-  --glass-border: rgba(24, 24, 27, 0.10);
-  --glass-highlight: rgba(255, 255, 255, 0.65);
+  --bg-canvas: #f7f2e6;
+  --bg-grad-1: rgba(232, 174, 48, 0.36);
+  --bg-grad-2: rgba(217, 119, 6, 0.22);
+  --bg-grad-3: rgba(59, 93, 148, 0.20);
+  --bg-linear: linear-gradient(135deg, #fbf7ec 0%, #f4ead2 48%, #ede4d3 100%);
+  --glass-bg: rgba(255, 253, 248, 0.68);
+  --glass-bg-elevated: rgba(255, 255, 255, 0.80);
+  --glass-border: rgba(24, 24, 27, 0.11);
+  --glass-highlight: rgba(255, 255, 255, 0.72);
 
   --text-primary: #16181d;
-  --text-secondary: #4a4f5a;
-  --text-muted: #69707d;
+  --text-secondary: #3f4450;
+  --text-muted: #5d6472;
 
   --accent: #a67108;
   --accent-strong: #8d5e04;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(166, 113, 8, 0.12);
+  --accent-soft: rgba(166, 113, 8, 0.14);
 }
 
 .dark {
-  /* High-Contrast Gold on Deep Obsidian Lacquer */
-  --bg-canvas: #080a0f;
-  --bg-ambient-1: rgba(245, 196, 81, 0.14);
-  --bg-ambient-2: rgba(56, 108, 176, 0.12);
-  --glass-bg: rgba(17, 20, 29, 0.74);
-  --glass-bg-elevated: rgba(23, 27, 39, 0.86);
-  --glass-border: rgba(245, 196, 81, 0.22);
-  --glass-highlight: rgba(245, 196, 81, 0.10);
+  /* Kinpaku Gold on Deep Obsidian Lacquer */
+  --bg-canvas: #07090f;
+  --bg-grad-1: rgba(246, 201, 69, 0.26);
+  --bg-grad-2: rgba(217, 119, 6, 0.22);
+  --bg-grad-3: rgba(56, 108, 176, 0.24);
+  --bg-linear: linear-gradient(135deg, #07090f 0%, #10131e 50%, #0a0c14 100%);
+  --glass-bg: rgba(16, 19, 28, 0.68);
+  --glass-bg-elevated: rgba(22, 26, 38, 0.82);
+  --glass-border: rgba(245, 196, 81, 0.24);
+  --glass-highlight: rgba(245, 196, 81, 0.12);
 
   /* High-contrast warm gold-ivory body text */
   --text-primary: #f9ebc4;
@@ -43,26 +47,33 @@
   --accent: #f6c945;
   --accent-strong: #ffd764;
   --accent-ink: #090b10;
-  --accent-soft: rgba(246, 201, 69, 0.15);
+  --accent-soft: rgba(246, 201, 69, 0.16);
 }
 
 /* Selectable Japanese Themes */
 [data-theme="aizome"]:not(.dark) {
-  --bg-canvas: #f2f5fa;
-  --bg-ambient-1: rgba(30, 64, 175, 0.11);
-  --bg-ambient-2: rgba(166, 113, 8, 0.08);
+  --bg-canvas: #eef3fb;
+  --bg-grad-1: rgba(37, 99, 235, 0.28);
+  --bg-grad-2: rgba(14, 165, 233, 0.22);
+  --bg-grad-3: rgba(217, 165, 42, 0.20);
+  --bg-linear: linear-gradient(135deg, #f3f7fe 0%, #e4ecfb 50%, #ebf3fa 100%);
+  --glass-bg: rgba(249, 251, 255, 0.68);
+  --glass-bg-elevated: rgba(255, 255, 255, 0.80);
+  --glass-border: rgba(30, 64, 175, 0.15);
   --accent: #1d4ed8;
   --accent-strong: #1e40af;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(29, 78, 216, 0.11);
+  --accent-soft: rgba(29, 78, 216, 0.12);
 }
 
 [data-theme="aizome"].dark {
-  --bg-canvas: #070b14;
-  --bg-ambient-1: rgba(96, 165, 250, 0.14);
-  --bg-ambient-2: rgba(245, 196, 81, 0.12);
-  --glass-bg: rgba(14, 21, 37, 0.76);
-  --glass-bg-elevated: rgba(19, 28, 48, 0.88);
+  --bg-canvas: #050a18;
+  --bg-grad-1: rgba(59, 130, 246, 0.30);
+  --bg-grad-2: rgba(20, 184, 166, 0.22);
+  --bg-grad-3: rgba(246, 201, 69, 0.20);
+  --bg-linear: linear-gradient(135deg, #050a18 0%, #0b1630 50%, #060d20 100%);
+  --glass-bg: rgba(12, 20, 38, 0.68);
+  --glass-bg-elevated: rgba(17, 27, 49, 0.82);
   --glass-border: rgba(245, 196, 81, 0.24);
   --accent: #f6c945;
   --accent-strong: #ffd764;
@@ -70,21 +81,28 @@
 }
 
 [data-theme="sakura"]:not(.dark) {
-  --bg-canvas: #faf4f6;
-  --bg-ambient-1: rgba(190, 62, 102, 0.11);
-  --bg-ambient-2: rgba(180, 120, 40, 0.07);
+  --bg-canvas: #fdf2f6;
+  --bg-grad-1: rgba(236, 72, 153, 0.26);
+  --bg-grad-2: rgba(251, 146, 60, 0.22);
+  --bg-grad-3: rgba(190, 24, 93, 0.18);
+  --bg-linear: linear-gradient(135deg, #fff5f8 0%, #fce8ef 50%, #fdf1ea 100%);
+  --glass-bg: rgba(255, 249, 251, 0.68);
+  --glass-bg-elevated: rgba(255, 255, 255, 0.80);
+  --glass-border: rgba(166, 52, 87, 0.15);
   --accent: #a63457;
   --accent-strong: #882544;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(166, 52, 87, 0.11);
+  --accent-soft: rgba(166, 52, 87, 0.12);
 }
 
 [data-theme="sakura"].dark {
-  --bg-canvas: #11090e;
-  --bg-ambient-1: rgba(244, 114, 182, 0.14);
-  --bg-ambient-2: rgba(245, 196, 81, 0.11);
-  --glass-bg: rgba(27, 15, 22, 0.76);
-  --glass-bg-elevated: rgba(36, 20, 29, 0.88);
+  --bg-canvas: #120810;
+  --bg-grad-1: rgba(244, 114, 182, 0.28);
+  --bg-grad-2: rgba(225, 29, 72, 0.22);
+  --bg-grad-3: rgba(246, 201, 69, 0.20);
+  --bg-linear: linear-gradient(135deg, #120810 0%, #24101f 50%, #150914 100%);
+  --glass-bg: rgba(27, 14, 23, 0.68);
+  --glass-bg-elevated: rgba(36, 19, 30, 0.82);
   --glass-border: rgba(245, 196, 81, 0.24);
   --accent: #f6c945;
   --accent-strong: #ffd764;
@@ -92,25 +110,135 @@
 }
 
 [data-theme="take"]:not(.dark) {
-  --bg-canvas: #f2f6f3;
-  --bg-ambient-1: rgba(22, 101, 52, 0.11);
-  --bg-ambient-2: rgba(166, 113, 8, 0.08);
+  --bg-canvas: #edf5ef;
+  --bg-grad-1: rgba(22, 163, 74, 0.26);
+  --bg-grad-2: rgba(13, 148, 136, 0.20);
+  --bg-grad-3: rgba(217, 165, 42, 0.20);
+  --bg-linear: linear-gradient(135deg, #f3faf5 0%, #e4f2e8 50%, #ecf4ea 100%);
+  --glass-bg: rgba(249, 253, 250, 0.68);
+  --glass-bg-elevated: rgba(255, 255, 255, 0.80);
+  --glass-border: rgba(22, 101, 52, 0.15);
   --accent: #166534;
   --accent-strong: #14532d;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(22, 101, 52, 0.11);
+  --accent-soft: rgba(22, 101, 52, 0.12);
 }
 
 [data-theme="take"].dark {
-  --bg-canvas: #07100c;
-  --bg-ambient-1: rgba(52, 211, 153, 0.13);
-  --bg-ambient-2: rgba(245, 196, 81, 0.12);
-  --glass-bg: rgba(12, 24, 19, 0.76);
-  --glass-bg-elevated: rgba(17, 33, 26, 0.88);
+  --bg-canvas: #05110b;
+  --bg-grad-1: rgba(52, 211, 153, 0.26);
+  --bg-grad-2: rgba(20, 184, 166, 0.22);
+  --bg-grad-3: rgba(246, 201, 69, 0.20);
+  --bg-linear: linear-gradient(135deg, #05110b 0%, #0c2217 50%, #07150e 100%);
+  --glass-bg: rgba(11, 24, 18, 0.68);
+  --glass-bg-elevated: rgba(16, 33, 25, 0.82);
   --glass-border: rgba(245, 196, 81, 0.24);
   --accent: #f6c945;
   --accent-strong: #ffd764;
   --accent-ink: #07100c;
+}
+
+@keyframes tabiDriftOne {
+  0% {
+    transform: translate3d(-6%, -4%, 0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(8%, 6%, 0) scale(1.12) rotate(10deg);
+  }
+  100% {
+    transform: translate3d(-6%, -4%, 0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes tabiDriftTwo {
+  0% {
+    transform: translate3d(5%, 4%, 0) scale(1.06) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-9%, -6%, 0) scale(0.96) rotate(-12deg);
+  }
+  100% {
+    transform: translate3d(5%, 4%, 0) scale(1.06) rotate(0deg);
+  }
+}
+
+@keyframes tabiDriftThree {
+  0% {
+    transform: translate3d(0%, 6%, 0) scale(0.98);
+  }
+  50% {
+    transform: translate3d(6%, -7%, 0) scale(1.14);
+  }
+  100% {
+    transform: translate3d(0%, 6%, 0) scale(0.98);
+  }
+}
+
+@keyframes tabiGradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Live Atmospheric Gradient Backdrop */
+.tabi-live-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background-color: var(--bg-canvas);
+  background-image: var(--bg-linear);
+  background-size: 200% 200%;
+  animation: tabiGradientFlow 18s ease-in-out infinite;
+  transition: background-color 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tabi-live-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+  will-change: transform;
+  transition: background 450ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tabi-live-orb-1 {
+  top: -18%;
+  left: -10%;
+  width: 62vw;
+  height: 62vw;
+  max-width: 780px;
+  max-height: 780px;
+  background: radial-gradient(circle at center, var(--bg-grad-1) 0%, transparent 68%);
+  animation: tabiDriftOne 16s ease-in-out infinite;
+}
+
+.tabi-live-orb-2 {
+  top: 12%;
+  right: -14%;
+  width: 58vw;
+  height: 58vw;
+  max-width: 740px;
+  max-height: 740px;
+  background: radial-gradient(circle at center, var(--bg-grad-2) 0%, transparent 68%);
+  animation: tabiDriftTwo 20s ease-in-out infinite;
+}
+
+.tabi-live-orb-3 {
+  bottom: -22%;
+  left: 24%;
+  width: 64vw;
+  height: 52vw;
+  max-width: 820px;
+  max-height: 680px;
+  background: radial-gradient(circle at center, var(--bg-grad-3) 0%, transparent 70%);
+  animation: tabiDriftThree 22s ease-in-out infinite;
 }
 
 @layer base {
@@ -118,13 +246,9 @@
     font-family: var(--font-sans);
     background-color: var(--bg-canvas);
     color: var(--text-primary);
-    background-image:
-      radial-gradient(ellipse 75% 55% at 12% 0%, var(--bg-ambient-1), transparent 70%),
-      radial-gradient(ellipse 65% 50% at 88% 15%, var(--bg-ambient-2), transparent 70%);
-    background-attachment: fixed;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
-    transition: background-color 200ms cubic-bezier(0.16, 1, 0.3, 1), color 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition: background-color 250ms cubic-bezier(0.16, 1, 0.3, 1), color 200ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   h1, h2, h3, .font-display {
@@ -148,16 +272,16 @@
 
 .liquid-glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(20px) saturate(145%);
-  -webkit-backdrop-filter: blur(20px) saturate(145%);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
   border: 1px solid var(--glass-border);
   box-shadow: inset 0 1px 0 0 var(--glass-highlight);
 }
 
 .liquid-glass-elevated {
   background: var(--glass-bg-elevated);
-  backdrop-filter: blur(24px) saturate(155%);
-  -webkit-backdrop-filter: blur(24px) saturate(155%);
+  backdrop-filter: blur(26px) saturate(170%);
+  -webkit-backdrop-filter: blur(26px) saturate(170%);
   border: 1px solid var(--glass-border);
   box-shadow:
     inset 0 1px 0 0 var(--glass-highlight),

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, type User } from 'firebase/auth';
 import {
   doc,
   getDocFromServer,
@@ -11,7 +11,16 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
+export const SCOPES = [
+  'https://www.googleapis.com/auth/tasks',
+  'https://www.googleapis.com/auth/tasks.readonly',
+];
+
 const app = initializeApp(firebaseConfig);
+
+const firestoreDatabaseId =
+  (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId ||
+  'ai-studio-aa1297ec-0731-4a23-85f4-be9bed55e9a3';
 
 function initDbWithPersistence(): Firestore {
   try {
@@ -22,17 +31,44 @@ function initDbWithPersistence(): Firestore {
           tabManager: persistentMultipleTabManager(),
         }),
       },
-      firebaseConfig.firestoreDatabaseId
+      firestoreDatabaseId
     );
   } catch {
-    return getFirestore(app, firebaseConfig.firestoreDatabaseId);
+    return firestoreDatabaseId
+      ? getFirestore(app, firestoreDatabaseId)
+      : getFirestore(app);
   }
 }
 
 export const db = initDbWithPersistence();
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+SCOPES.forEach((scope) => googleProvider.addScope(scope));
 googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// In-memory cache only for Workspace OAuth token (never stored in localStorage/sessionStorage)
+let cachedWorkspaceAccessToken: string | null = null;
+
+export function getWorkspaceAccessToken(): string | null {
+  return cachedWorkspaceAccessToken;
+}
+
+export function clearWorkspaceAccessToken(): void {
+  cachedWorkspaceAccessToken = null;
+}
+
+export async function googleSignInWithWorkspace(): Promise<{
+  user: User;
+  accessToken: string | null;
+}> {
+  const result = await signInWithPopup(auth, googleProvider);
+  const credential = GoogleAuthProvider.credentialFromResult(result);
+  cachedWorkspaceAccessToken = credential?.accessToken ?? null;
+  return {
+    user: result.user,
+    accessToken: cachedWorkspaceAccessToken,
+  };
+}
 
 export enum OperationType {
   CREATE = 'create',

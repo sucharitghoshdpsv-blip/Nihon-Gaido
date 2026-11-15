@@ -107,6 +107,43 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["authorUid", "authorName", "city", "category", "message", "createdAt", "updatedAt"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "User-submitted customer care issue report or support ticket.",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "ticketRef": { "type": "string", "minLength": 4, "maxLength": 20 },
+        "category": { "type": "string", "enum": ["bug", "translation", "maps", "budget", "account", "content", "other"] },
+        "severity": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "area": { "type": "string", "enum": ["explore", "learn", "itinerary", "budget", "safety", "published"] },
+        "subject": { "type": "string", "minLength": 3, "maxLength": 100 },
+        "description": { "type": "string", "minLength": 10, "maxLength": 1000 },
+        "contactEmail": { "type": "string", "minLength": 0, "maxLength": 160 },
+        "cityContext": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "diagnostics": { "type": "string", "minLength": 0, "maxLength": 400 },
+        "status": { "type": "string", "enum": ["open", "in_review", "resolved"] },
+        "resolutionNote": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerUid",
+        "ticketRef",
+        "category",
+        "severity",
+        "area",
+        "subject",
+        "description",
+        "contactEmail",
+        "cityContext",
+        "diagnostics",
+        "status",
+        "resolutionNote",
+        "createdAt",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
@@ -133,6 +170,10 @@
     "/users/{userId}/reminders/{reminderId}": {
       "schema": { "$ref": "#/entities/TravelReminder" },
       "description": "User flight and Shinkansen departure alerts."
+    },
+    "/users/{userId}/supportTickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/SupportTicket" },
+      "description": "Customer care tickets and reported app or travel issues owned by the user."
     },
     "/communityPosts/{postId}": {
       "schema": { "$ref": "#/entities/CommunityPost" },

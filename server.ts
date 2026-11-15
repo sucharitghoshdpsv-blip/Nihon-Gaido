@@ -1,15 +1,28 @@
 import 'dotenv/config';
+import fs from 'fs/promises';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
+import {
+  normalizeGoogleWeatherPayload,
+  normalizeOpenMeteoPayload,
+} from './src/utils/weather';
+import {
+  extractVideoFromInteraction,
+  getExplorePresetById,
+  isBillingOrQuotaMessage,
+  normalizeVideoAspectRatio,
+  parseImageDataUrl,
+  resolveExploreAssetFilename,
+} from './src/utils/videoStudio';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '15mb' }));
 
 function getGeminiClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -103,6 +116,103 @@ app.get('/api/maps/config', (_req, res) => {
   const raw = process.env.VITE_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
   const apiKey = raw === 'MY_GOOGLE_MAPS_API_KEY' ? '' : raw;
   res.json({ apiKey });
+});
+
+// 3-Day City Weather Forecast (Google Maps Platform Weather API proxy + Open-Meteo fallback)
+app.get('/api/weather/forecast', async (req, res) => {
+  const lat = Number(req.query.lat);
+  const lng = Number(req.query.lng);
+  const city = typeof req.query.city === 'string' && req.query.city.trim() ? req.query.city.trim() : 'Tokyo';
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    res.status(400).json({ error: 'Valid latitude and longitude coordinates are required.' });
+    return;
+  }
+
+  const rawKey = process.env.VITE_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
+  const mapsApiKey = rawKey && rawKey !== 'MY_GOOGLE_MAPS_API_KEY' ? rawKey : '';
+  let gmpQuotaExceeded = false;
+
+  if (mapsApiKey) {
+    try {
+      const forecastUrl = new URL('https://weather.googleapis.com/v1/forecast/days:lookup');
+      forecastUrl.searchParams.set('key', mapsApiKey);
+      forecastUrl.searchParams.set('location.latitude', String(lat));
+      forecastUrl.searchParams.set('location.longitude', String(lng));
+      forecastUrl.searchParams.set('days', '3');
+      forecastUrl.searchParams.set('pageSize', '3');
+      forecastUrl.searchParams.set('unitsSystem', 'METRIC');
+      forecastUrl.searchParams.set('languageCode', 'en');
+
+      const currentUrl = new URL('https://weather.googleapis.com/v1/currentConditions:lookup');
+      currentUrl.searchParams.set('key', mapsApiKey);
+      currentUrl.searchParams.set('location.latitude', String(lat));
+      currentUrl.searchParams.set('location.longitude', String(lng));
+      currentUrl.searchParams.set('unitsSystem', 'METRIC');
+      currentUrl.searchParams.set('languageCode', 'en');
+
+      const gmpHeaders = {
+        'X-Goog-Maps-Solution-ID': 'gmp_mcp_codeassist_v1_aistudio',
+      };
+
+      const [forecastRes, currentRes] = await Promise.all([
+        fetch(forecastUrl.toString(), { method: 'GET', headers: gmpHeaders }),
+        fetch(currentUrl.toString(), { method: 'GET', headers: gmpHeaders }),
+      ]);
+
+      const forecastJson = (await forecastRes.json().catch(() => null)) as Record<string, unknown> | null;
+      const forecastErr = (forecastJson?.error && typeof forecastJson.error === 'object'
+        ? forecastJson.error
+        : null) as Record<string, unknown> | null;
+
+      if (forecastRes.status === 429 || forecastErr?.status === 'RESOURCE_EXHAUSTED') {
+        gmpQuotaExceeded = true;
+      }
+
+      if (
+        forecastRes.ok &&
+        forecastJson &&
+        Array.isArray(forecastJson.forecastDays) &&
+        forecastJson.forecastDays.length > 0
+      ) {
+        const currentJson = currentRes.ok ? await currentRes.json().catch(() => null) : null;
+        const normalized = normalizeGoogleWeatherPayload(city, forecastJson, currentJson);
+        res.json({ ...normalized, gmpQuotaExceeded: false });
+        return;
+      }
+    } catch {
+      // Fall through to meteorological fallback if Google Weather API is unreachable or disabled
+    }
+  }
+
+  try {
+    const meteoUrl = new URL('https://api.open-meteo.com/v1/forecast');
+    meteoUrl.searchParams.set('latitude', String(lat));
+    meteoUrl.searchParams.set('longitude', String(lng));
+    meteoUrl.searchParams.set(
+      'current',
+      'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code'
+    );
+    meteoUrl.searchParams.set(
+      'daily',
+      'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,relative_humidity_2m_mean'
+    );
+    meteoUrl.searchParams.set('timezone', 'Asia/Tokyo');
+    meteoUrl.searchParams.set('forecast_days', '3');
+
+    const meteoRes = await fetch(meteoUrl.toString());
+    if (!meteoRes.ok) {
+      throw new Error(`Weather upstream returned ${meteoRes.status}`);
+    }
+    const meteoJson = await meteoRes.json();
+    const summary = normalizeOpenMeteoPayload(city, meteoJson);
+    res.json({ ...summary, gmpQuotaExceeded });
+  } catch (err: unknown) {
+    res.status(502).json({
+      error: err instanceof Error ? err.message : 'Unable to fetch 3-day weather forecast right now.',
+      gmpQuotaExceeded,
+    });
+  }
 });
 
 // Nuance-aware Japanese <-> English Translator (gemini-4-carbon + ThinkingLevel.HIGH)
@@ -326,6 +436,119 @@ Provide concise coaching on pitch accent, vowel length, or consonant articulatio
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Pronunciation coaching failed.';
+    res.status(500).json({ error: message });
+  }
+});
+
+// Animate Explore Destination or Uploaded Image into 3-Second Video (gemini-omni-1.2-flash Interactions API)
+app.post('/api/gemini/animate-video', async (req, res) => {
+  try {
+    const { assetId, imageDataUrl, prompt, aspectRatio } = req.body as {
+      assetId?: string;
+      imageDataUrl?: string;
+      prompt?: string;
+      aspectRatio?: string;
+    };
+
+    const safeAspect = normalizeVideoAspectRatio(aspectRatio);
+    let imageBase64 = '';
+    let imageMimeType: 'image/jpeg' | 'image/png' | 'image/webp' = 'image/jpeg';
+    let defaultPrompt =
+      'Smooth 3-second cinematic travel motion bringing subtle lantern glow, drifting mist, and depth parallax to the Japanese scene.';
+
+    if (typeof imageDataUrl === 'string' && imageDataUrl.trim()) {
+      const parsed = parseImageDataUrl(imageDataUrl);
+      imageBase64 = parsed.base64Data;
+      imageMimeType = parsed.mimeType;
+    } else if (typeof assetId === 'string' && assetId.trim()) {
+      const safeFilename = resolveExploreAssetFilename(assetId);
+      if (!safeFilename) {
+        res.status(400).json({ error: 'Unknown Explore destination image preset.' });
+        return;
+      }
+      const preset = getExplorePresetById(assetId);
+      if (preset) {
+        defaultPrompt = preset.defaultPrompt;
+      }
+      const imagePath = path.resolve(__dirname, 'public', 'images', safeFilename);
+      const buffer = await fs.readFile(imagePath);
+      imageBase64 = buffer.toString('base64');
+      imageMimeType = safeFilename.toLowerCase().endsWith('.png')
+        ? 'image/png'
+        : safeFilename.toLowerCase().endsWith('.webp')
+          ? 'image/webp'
+          : 'image/jpeg';
+    } else {
+      res.status(400).json({ error: 'Choose an Explore image or upload a photo first.' });
+      return;
+    }
+
+    const motionPrompt =
+      typeof prompt === 'string' && prompt.trim()
+        ? prompt.trim().slice(0, 600)
+        : defaultPrompt;
+
+    const ai = getGeminiClient();
+    const interaction = await ai.interactions.create(
+      {
+        model: 'gemini-omni-1.2-flash',
+        input: [
+          {
+            type: 'image',
+            mime_type: imageMimeType,
+            data: imageBase64,
+          },
+          {
+            type: 'text',
+            text: motionPrompt,
+          },
+        ],
+        background: false,
+        store: false,
+        stream: false,
+        response_format: {
+          type: 'video',
+          aspect_ratio: safeAspect,
+          duration: '3s',
+        },
+      },
+      { timeout: 300000 }
+    );
+
+    const extracted = extractVideoFromInteraction(interaction);
+    if (!extracted) {
+      res.status(502).json({
+        error: 'Gemini Omni Flash completed without returning a video output payload.',
+      });
+      return;
+    }
+
+    const videoDataUrl = extracted.dataBase64
+      ? `data:${extracted.mimeType};base64,${extracted.dataBase64}`
+      : extracted.uri;
+
+    if (!videoDataUrl) {
+      res.status(502).json({ error: 'Generated video payload was empty.' });
+      return;
+    }
+
+    res.json({
+      videoDataUrl,
+      mimeType: extracted.mimeType,
+      aspectRatio: safeAspect,
+      duration: '3s',
+      modelUsed: 'gemini-omni-1.2-flash',
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Video animation failed.';
+    if (isBillingOrQuotaMessage(message)) {
+      res.status(403).json({
+        error:
+          '3-second AI video generation via gemini-omni-1.2-flash requires a billing-enabled GEMINI_API_KEY in Settings > Secrets. Explore cards continue playing 3-second kinetic motion loops locally.',
+        billingRequired: true,
+      });
+      return;
+    }
     res.status(500).json({ error: message });
   }
 });

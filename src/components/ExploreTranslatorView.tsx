@@ -18,6 +18,8 @@ import {
   speakJapanese,
 } from '../utils/speech';
 import { evaluatePronunciationMatch, type PronunciationEvaluation } from '../utils/learning';
+import { CityWeatherForecast } from './CityWeatherForecast';
+import { ExploreVideoStudio } from './ExploreVideoStudio';
 
 interface TranslationResult {
   primaryTranslation: string;
@@ -41,14 +43,24 @@ interface ChatMessage {
 interface ExploreTranslatorViewProps {
   selectedCity: CityGuide;
   onSelectCity: (city: CityGuide) => void;
+  onOpen3DShrine: () => void;
 }
 
 export const ExploreTranslatorView: React.FC<ExploreTranslatorViewProps> = ({
   selectedCity,
   onSelectCity,
+  onOpen3DShrine,
 }) => {
   const [heroImgFailed, setHeroImgFailed] = useState(false);
   const [failedCityImages, setFailedCityImages] = useState<Record<string, boolean>>({});
+  const [generatedVideos, setGeneratedVideos] = useState<Record<string, string>>({});
+
+  const handleApplyVideoToExplore = (
+    targetKey: 'hero' | CityGuide['id'],
+    videoDataUrl: string
+  ) => {
+    setGeneratedVideos((prev) => ({ ...prev, [targetKey]: videoDataUrl }));
+  };
 
   // Translator state
   const [direction, setDirection] = useState<'en-to-ja' | 'ja-to-en'>('en-to-ja');
@@ -259,11 +271,21 @@ export const ExploreTranslatorView: React.FC<ExploreTranslatorViewProps> = ({
     <div className="space-y-8">
       {/* Editorial Hero Split */}
       <section className="liquid-glass-elevated rounded-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 items-stretch">
-        <div className="lg:col-span-7 relative min-h-[260px] lg:min-h-[340px]">
-          {!heroImgFailed ? (
+        <div className="lg:col-span-7 relative min-h-[260px] lg:min-h-[340px] overflow-hidden">
+          {generatedVideos[selectedCity.id] || generatedVideos.hero ? (
+            <video
+              key={generatedVideos[selectedCity.id] || generatedVideos.hero}
+              src={generatedVideos[selectedCity.id] || generatedVideos.hero}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover lg:absolute lg:inset-0"
+            />
+          ) : !heroImgFailed ? (
             <img
-              src={HERO_IMAGE_URL}
-              alt="Gion Kyoto twilight machiya lane with glowing paper lanterns"
+              src={selectedCity.imageUrl || HERO_IMAGE_URL}
+              alt={`${selectedCity.id} ${selectedCity.district}`}
               referrerPolicy="no-referrer"
               onError={() => setHeroImgFailed(true)}
               className="w-full h-full object-cover lg:absolute lg:inset-0"
@@ -346,7 +368,17 @@ export const ExploreTranslatorView: React.FC<ExploreTranslatorViewProps> = ({
                 }`}
               >
                 <div className="aspect-[4/3] relative overflow-hidden bg-slate-900">
-                  {!imgBroken ? (
+                  {generatedVideos[city.id] ? (
+                    <video
+                      key={generatedVideos[city.id]}
+                      src={generatedVideos[city.id]}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  ) : !imgBroken ? (
                     <img
                       src={city.imageUrl}
                       alt={`${city.id} ${city.district}`}
@@ -374,6 +406,17 @@ export const ExploreTranslatorView: React.FC<ExploreTranslatorViewProps> = ({
           })}
         </div>
       </section>
+
+      {/* 3-Second Motion Video Studio & 3D Shrine Entry */}
+      <ExploreVideoStudio
+        selectedCity={selectedCity}
+        generatedVideos={generatedVideos}
+        onApplyVideoToExplore={handleApplyVideoToExplore}
+        onOpen3DShrine={onOpen3DShrine}
+      />
+
+      {/* 3-Day City Weather Outlook */}
+      <CityWeatherForecast selectedCity={selectedCity} />
 
       {/* Main Workspace: Nuance Translator + AI Concierge */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

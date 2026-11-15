@@ -65,8 +65,9 @@ import {
   type SupportTicketStatus,
 } from './utils/support';
 import { EtiquetteOverlay } from './components/EtiquetteOverlay';
+import { ThreeShrineView } from './components/ThreeShrineView';
 
-type AppSection = 'explore' | 'learn' | 'itinerary' | 'budget' | 'safety' | 'support';
+type AppSection = 'explore' | 'shrine3d' | 'learn' | 'itinerary' | 'budget' | 'safety' | 'support';
 
 const STORAGE_KEYS = {
   theme: 'tabiguide_theme',
@@ -732,6 +733,7 @@ export default function App() {
 
   const navItems: Array<{ id: AppSection; label: string }> = [
     { id: 'explore', label: 'Explore' },
+    { id: 'shrine3d', label: '3D Shrine' },
     { id: 'learn', label: 'Learn' },
     { id: 'itinerary', label: 'Itinerary' },
     { id: 'budget', label: 'Budget' },
@@ -960,6 +962,13 @@ export default function App() {
               <ExploreTranslatorView
                 selectedCity={selectedCity}
                 onSelectCity={handleSelectCity}
+                onOpen3DShrine={() => handleNavigate('shrine3d')}
+              />
+            )}
+            {activeSection === 'shrine3d' && (
+              <ThreeShrineView
+                selectedCityName={selectedCity.id}
+                onExit={() => handleNavigate('explore')}
               />
             )}
             {activeSection === 'learn' && (

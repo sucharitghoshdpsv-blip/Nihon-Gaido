@@ -3,12 +3,11 @@ import fs from 'fs/promises';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import {
   normalizeGoogleWeatherPayload,
   normalizeOpenMeteoPayload,
-} from './src/utils/weather';
+} from './src/utils/weather.ts';
 import {
   extractVideoFromInteraction,
   getExplorePresetById,
@@ -16,7 +15,7 @@ import {
   normalizeVideoAspectRatio,
   parseImageDataUrl,
   resolveExploreAssetFilename,
-} from './src/utils/videoStudio';
+} from './src/utils/videoStudio.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -557,6 +556,7 @@ async function startServer() {
   const port = Number(process.env.PORT) || 3000;
 
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
@@ -565,7 +565,11 @@ async function startServer() {
   } else {
     const distPath = path.resolve(__dirname, 'dist');
     app.use(express.static(distPath));
-    app.get('*', (_req, res) => {
+    app.get('*', (req, res) => {
+      if (req.path.startsWith('/api/')) {
+        res.status(404).json({ error: 'API endpoint not found.' });
+        return;
+      }
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }

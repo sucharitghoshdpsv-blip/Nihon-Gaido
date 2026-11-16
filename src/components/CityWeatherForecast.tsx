@@ -22,6 +22,7 @@ import {
 
 interface CityWeatherForecastProps {
   selectedCity: CityGuide;
+  onWeatherLoaded?: (summary: CityWeatherSummary) => void;
 }
 
 interface WeatherApiResponse extends CityWeatherSummary {
@@ -51,7 +52,10 @@ const WeatherConditionIcon: React.FC<{
   }
 };
 
-export const CityWeatherForecast: React.FC<CityWeatherForecastProps> = ({ selectedCity }) => {
+export const CityWeatherForecast: React.FC<CityWeatherForecastProps> = ({
+  selectedCity,
+  onWeatherLoaded,
+}) => {
   const [unit, setUnit] = useState<TemperatureUnit>('C');
   const [weather, setWeather] = useState<CityWeatherSummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -79,6 +83,7 @@ export const CityWeatherForecast: React.FC<CityWeatherForecastProps> = ({ select
         }
 
         setWeather(data);
+        onWeatherLoaded?.(data);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
         setError(

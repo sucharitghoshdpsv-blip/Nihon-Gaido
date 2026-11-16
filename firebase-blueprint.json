@@ -144,6 +144,34 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "StampEntry": {
+      "title": "StampEntry",
+      "description": "Goshuin shrine seal or train station Eki stamp collector record.",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "stampKind": { "type": "string", "enum": ["goshuin", "eki"] },
+        "placeName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "city": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "stampedDate": { "type": "string", "minLength": 10, "maxLength": 10 },
+        "notes": { "type": "string", "minLength": 0, "maxLength": 400 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "stampKind", "placeName", "city", "stampedDate", "notes", "createdAt", "updatedAt"]
+    },
+    "PackingChecklistState": {
+      "title": "PackingChecklistState",
+      "description": "User packing checklist completion and custom items.",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "checkedIds": { "type": "array" },
+        "customItemsJson": { "type": "string", "minLength": 0, "maxLength": 4000 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerUid", "checkedIds", "customItemsJson", "updatedAt"]
     }
   },
   "firestore": {
@@ -174,6 +202,14 @@
     "/users/{userId}/supportTickets/{ticketId}": {
       "schema": { "$ref": "#/entities/SupportTicket" },
       "description": "Customer care tickets and reported app or travel issues owned by the user."
+    },
+    "/users/{userId}/stamps/{stampId}": {
+      "schema": { "$ref": "#/entities/StampEntry" },
+      "description": "Goshuin temple/shrine seals and Eki station stamps logged by the user."
+    },
+    "/users/{userId}/checklists/{checklistId}": {
+      "schema": { "$ref": "#/entities/PackingChecklistState" },
+      "description": "User dynamic pre-departure packing checklist state."
     },
     "/communityPosts/{postId}": {
       "schema": { "$ref": "#/entities/CommunityPost" },

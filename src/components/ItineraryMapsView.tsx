@@ -18,6 +18,11 @@ import {
 import { convertFromJpy, formatCurrencyAmount, formatJpy } from '../utils/currency';
 import { GoogleJapanMap } from './GoogleJapanMap';
 import { GoogleTasksPanel } from './GoogleTasksPanel';
+import { RouteBuilderSection } from './RouteBuilderSection';
+import { JrPassCalculator } from './JrPassCalculator';
+import { LastTrainWidget } from './LastTrainWidget';
+import { PackingChecklistPanel } from './PackingChecklistPanel';
+import type { CityWeatherSummary } from '../utils/weather';
 
 interface ItineraryMapsViewProps {
   itinerary: ItineraryPlan;
@@ -31,6 +36,12 @@ interface ItineraryMapsViewProps {
   workspaceToken: string | null;
   onConnectGoogleWorkspace: () => Promise<void>;
   onWorkspaceTokenExpired: () => void;
+  weatherSummary: CityWeatherSummary | null;
+  packingCheckedIds: string[];
+  packingCustomItems: Array<{ id: string; label: string }>;
+  onTogglePackingItem: (itemId: string) => void;
+  onAddPackingCustomItem: (label: string) => void;
+  onRemovePackingCustomItem: (id: string) => void;
 }
 
 const INTEREST_OPTIONS = [
@@ -53,6 +64,12 @@ export const ItineraryMapsView: React.FC<ItineraryMapsViewProps> = ({
   workspaceToken,
   onConnectGoogleWorkspace,
   onWorkspaceTokenExpired,
+  weatherSummary,
+  packingCheckedIds,
+  packingCustomItems,
+  onTogglePackingItem,
+  onAddPackingCustomItem,
+  onRemovePackingCustomItem,
 }) => {
   const [daysCount, setDaysCount] = useState(3);
   const [pace, setPace] = useState<'relaxed' | 'balanced' | 'packed'>('balanced');
@@ -537,6 +554,40 @@ export const ItineraryMapsView: React.FC<ItineraryMapsViewProps> = ({
           })}
         </div>
       </section>
+
+      {/* Smart Day-by-Day Route Builder & Transit Calculator */}
+      <RouteBuilderSection
+        itinerary={itinerary}
+        onUpdateItinerary={onUpdateItinerary}
+        homeCurrency={homeCurrency}
+        rates={rates}
+      />
+
+      {/* JR Pass vs. Point-to-Point Calculator */}
+      <JrPassCalculator homeCurrency={homeCurrency} rates={rates} />
+
+      {/* Last-Train Countdown + Dynamic Weather-Aware Packing Checklist */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        <div className="lg:col-span-5">
+          <LastTrainWidget
+            selectedCity={selectedCity}
+            homeCurrency={homeCurrency}
+            rates={rates}
+          />
+        </div>
+        <div className="lg:col-span-7">
+          <PackingChecklistPanel
+            cityName={selectedCity.id}
+            weather={weatherSummary}
+            itinerary={itinerary}
+            checkedIds={packingCheckedIds}
+            customItems={packingCustomItems}
+            onToggleItem={onTogglePackingItem}
+            onAddCustomItem={onAddPackingCustomItem}
+            onRemoveCustomItem={onRemovePackingCustomItem}
+          />
+        </div>
+      </div>
 
       {/* Google Tasks Trip Checklist Integration */}
       <GoogleTasksPanel

@@ -24,17 +24,28 @@ import {
   isSpeechRecognitionSupported,
   speakJapanese,
 } from '../utils/speech';
+import type { KanjiSightingRecord, WildKanjiItem } from '../utils/kanjiSafari';
+import { KanjiSafariPanel } from './KanjiSafariPanel';
+import type { StoredVaultRecord } from './SafetyVaultView';
 
 interface LearningStudioViewProps {
   progress: LearningProgressState;
   onMasterItem: (itemId: string, xpGain?: number) => void;
+  safariSightings: KanjiSightingRecord[];
+  onLogSafariSighting: (kanjiItem: WildKanjiItem, city: string, note: string) => void;
+  onSaveVaultItem: (
+    record: Omit<StoredVaultRecord, 'id' | 'createdAtLabel'>
+  ) => Promise<void>;
 }
 
-type StudioTab = 'kana' | 'phrases' | 'grammar' | 'practice';
+type StudioTab = 'kana' | 'phrases' | 'grammar' | 'practice' | 'safari';
 
 export const LearningStudioView: React.FC<LearningStudioViewProps> = ({
   progress,
   onMasterItem,
+  safariSightings,
+  onLogSafariSighting,
+  onSaveVaultItem,
 }) => {
   const [activeTab, setActiveTab] = useState<StudioTab>('kana');
   const [scriptFilter, setScriptFilter] = useState<'Hiragana' | 'Katakana'>('Hiragana');
@@ -211,6 +222,7 @@ export const LearningStudioView: React.FC<LearningStudioViewProps> = ({
             { id: 'phrases', label: 'Travel Phrases' },
             { id: 'grammar', label: 'Grammar Drills' },
             { id: 'practice', label: 'Speaking & Writing' },
+            { id: 'safari', label: `Kanji Safari (${safariSightings.length})` },
           ] as const
         ).map((tab) => (
           <button
@@ -626,6 +638,15 @@ export const LearningStudioView: React.FC<LearningStudioViewProps> = ({
             )}
           </div>
         </div>
+      )}
+
+      {/* Tab 5: Kanji & Street Sign Safari */}
+      {activeTab === 'safari' && (
+        <KanjiSafariPanel
+          sightings={safariSightings}
+          onLogSighting={onLogSafariSighting}
+          onSaveVaultItem={onSaveVaultItem}
+        />
       )}
     </div>
   );

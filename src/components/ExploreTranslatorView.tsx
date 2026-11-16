@@ -20,6 +20,9 @@ import {
 import { evaluatePronunciationMatch, type PronunciationEvaluation } from '../utils/learning';
 import { CityWeatherForecast } from './CityWeatherForecast';
 import { ExploreVideoStudio } from './ExploreVideoStudio';
+import { VisualDecoderPanel } from './VisualDecoderPanel';
+import { KonbiniPharmacyGuide } from './KonbiniPharmacyGuide';
+import type { CityWeatherSummary } from '../utils/weather';
 
 interface TranslationResult {
   primaryTranslation: string;
@@ -44,12 +47,14 @@ interface ExploreTranslatorViewProps {
   selectedCity: CityGuide;
   onSelectCity: (city: CityGuide) => void;
   onOpen3DShrine: () => void;
+  onWeatherLoaded?: (summary: CityWeatherSummary) => void;
 }
 
 export const ExploreTranslatorView: React.FC<ExploreTranslatorViewProps> = ({
   selectedCity,
   onSelectCity,
   onOpen3DShrine,
+  onWeatherLoaded,
 }) => {
   const [heroImgFailed, setHeroImgFailed] = useState(false);
   const [failedCityImages, setFailedCityImages] = useState<Record<string, boolean>>({});
@@ -416,7 +421,16 @@ export const ExploreTranslatorView: React.FC<ExploreTranslatorViewProps> = ({
       />
 
       {/* 3-Day City Weather Outlook */}
-      <CityWeatherForecast selectedCity={selectedCity} />
+      <CityWeatherForecast
+        selectedCity={selectedCity}
+        onWeatherLoaded={onWeatherLoaded}
+      />
+
+      {/* Multimodal Menu, Vending Machine & Shrine Sign Decoder */}
+      <VisualDecoderPanel selectedCity={selectedCity} />
+
+      {/* Konbini & Pharmacy Survival Vault */}
+      <KonbiniPharmacyGuide />
 
       {/* Main Workspace: Nuance Translator + AI Concierge */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

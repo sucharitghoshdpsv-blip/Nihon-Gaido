@@ -137,6 +137,29 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    function isValidStampEntry(data, userId) {
+      return data.keys().hasAll(['ownerUid', 'stampKind', 'placeName', 'city', 'stampedDate', 'notes', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'stampKind', 'placeName', 'city', 'stampedDate', 'notes', 'createdAt', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid == userId && data.ownerUid == request.auth.uid
+        && data.stampKind in ['goshuin', 'eki']
+        && data.placeName is string && data.placeName.size() >= 1 && data.placeName.size() <= 100
+        && data.city is string && data.city.size() >= 1 && data.city.size() <= 40
+        && data.stampedDate is string && data.stampedDate.size() == 10
+        && data.notes is string && data.notes.size() <= 400
+        && data.createdAt is timestamp
+        && data.updatedAt == request.time;
+    }
+
+    function isValidPackingChecklist(data, userId) {
+      return data.keys().hasAll(['ownerUid', 'checkedIds', 'customItemsJson', 'updatedAt'])
+        && data.keys().hasOnly(['ownerUid', 'checkedIds', 'customItemsJson', 'updatedAt'])
+        && data.ownerUid is string && data.ownerUid == userId && data.ownerUid == request.auth.uid
+        && data.checkedIds is list && data.checkedIds.size() <= 150
+        && (data.checkedIds.size() == 0 || data.checkedIds[0] is string)
+        && data.customItemsJson is string && data.customItemsJson.size() <= 4000
+        && data.updatedAt == request.time;
+    }
+
     match /users/{userId} {
       allow get: if isValidId(userId) && isOwner(userId);
       allow create: if isValidId(userId) && isVerified() && isOwner(userId) && isValidUserProfile(incoming(), userId);
@@ -222,6 +245,31 @@ service cloud.firestore {
           && incoming().createdAt == existing().createdAt
           && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'resolutionNote', 'updatedAt']);
         allow delete: if isValidId(userId) && isValidId(ticketId) && isVerified() && isOwner(userId);
+      }
+
+      match /stamps/{stampId} {
+        allow get: if isValidId(userId) && isValidId(stampId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerUid == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(stampId) && isVerified() && isOwner(userId)
+          && isValidStampEntry(incoming(), userId) && incoming().createdAt == request.time;
+        allow update: if isValidId(userId) && isValidId(stampId) && isVerified() && isOwner(userId)
+          && isValidStampEntry(incoming(), userId)
+          && incoming().ownerUid == existing().ownerUid
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['stampKind', 'placeName', 'city', 'stampedDate', 'notes', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(stampId) && isVerified() && isOwner(userId);
+      }
+
+      match /checklists/{checklistId} {
+        allow get: if isValidId(userId) && isValidId(checklistId) && isOwner(userId);
+        allow list: if isValidId(userId) && isOwner(userId) && resource.data.ownerUid == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(checklistId) && isVerified() && isOwner(userId)
+          && isValidPackingChecklist(incoming(), userId);
+        allow update: if isValidId(userId) && isValidId(checklistId) && isVerified() && isOwner(userId)
+          && isValidPackingChecklist(incoming(), userId)
+          && incoming().ownerUid == existing().ownerUid
+          && incoming().diff(existing()).affectedKeys().hasOnly(['checkedIds', 'customItemsJson', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(checklistId) && isVerified() && isOwner(userId);
       }
     }
 

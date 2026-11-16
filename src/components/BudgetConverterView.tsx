@@ -22,6 +22,7 @@ import {
   type ExchangeRateSnapshot,
 } from '../utils/currency';
 import { CITY_GUIDES } from '../data/japanData';
+import { TaxFreeSplitCalculator } from './TaxFreeSplitCalculator';
 
 interface BudgetConverterViewProps {
   expenses: ExpenseEntry[];
@@ -36,6 +37,7 @@ interface BudgetConverterViewProps {
   rateSnapshot: ExchangeRateSnapshot;
   refreshingRates: boolean;
   onRefreshRates: () => void;
+  selectedCityName?: string;
 }
 
 export const BudgetConverterView: React.FC<BudgetConverterViewProps> = ({
@@ -51,6 +53,7 @@ export const BudgetConverterView: React.FC<BudgetConverterViewProps> = ({
   rateSnapshot,
   refreshingRates,
   onRefreshRates,
+  selectedCityName = 'Tokyo',
 }) => {
   // Bidirectional converter state
   const [converterJpy, setConverterJpy] = useState<string>('10000');
@@ -332,6 +335,14 @@ export const BudgetConverterView: React.FC<BudgetConverterViewProps> = ({
           </div>
         </section>
       </div>
+
+      {/* Tax-Free Threshold & Group Split-Bill Calculators */}
+      <TaxFreeSplitCalculator
+        homeCurrency={homeCurrency}
+        rates={rateSnapshot.rates}
+        selectedCityName={selectedCityName}
+        onAddExpense={onAddExpense}
+      />
 
       {/* Category Breakdown Chart + Add Expense Form */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

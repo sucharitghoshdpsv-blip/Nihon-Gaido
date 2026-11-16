@@ -66,6 +66,9 @@ import {
 } from './utils/support';
 import { EtiquetteOverlay } from './components/EtiquetteOverlay';
 import { ThreeShrineView } from './components/ThreeShrineView';
+import type { CityWeatherSummary } from './utils/weather';
+import type { KanjiSightingRecord, WildKanjiItem } from './utils/kanjiSafari';
+import type { StampEntryRecord } from './components/GoshuinPassportPanel';
 
 type AppSection = 'explore' | 'shrine3d' | 'learn' | 'itinerary' | 'budget' | 'safety' | 'support';
 
@@ -85,7 +88,32 @@ const STORAGE_KEYS = {
   vault: 'tabiguide_vault_local',
   totpSecret: 'tabiguide_totp_secret',
   supportTickets: 'tabiguide_support_tickets',
+  weatherCache: 'tabiguide_weather_cache',
+  stamps: 'tabiguide_stamps',
+  safari: 'tabiguide_kanji_safari',
+  packing: 'tabiguide_packing_state',
 };
+
+const SEED_STAMPS: StampEntryRecord[] = [
+  {
+    id: 'stamp-seed-1',
+    stampKind: 'goshuin',
+    placeName: 'Meiji Jingu Sanctuary Seal',
+    city: 'Tokyo',
+    stampedDate: '2026-11-14',
+    notes: 'Hand-brushed vermilion seal received inside the Kaguraden courtyard.',
+    createdAtLabel: 'Starter',
+  },
+  {
+    id: 'stamp-seed-2',
+    stampKind: 'eki',
+    placeName: 'Kyoto Station Shinkansen Hachijo Eki Stamp',
+    city: 'Kyoto',
+    stampedDate: '2026-11-15',
+    notes: 'Green JR West geometric pagoda stamp near Tourist Info Desk.',
+    createdAtLabel: 'Starter',
+  },
+];
 
 function readStorage<T>(key: string, fallback: T): T {
   try {
@@ -179,6 +207,31 @@ export default function App() {
   const [supportTickets, setSupportTickets] = useState<SupportTicketItem[]>(() =>
     readStorage<SupportTicketItem[]>(STORAGE_KEYS.supportTickets, [])
   );
+  const [weatherByCity, setWeatherByCity] = useState<Record<string, CityWeatherSummary>>(() =>
+    readStorage<Record<string, CityWeatherSummary>>(STORAGE_KEYS.weatherCache, {})
+  );
+  const [stamps, setStamps] = useState<StampEntryRecord[]>(() =>
+    readStorage<StampEntryRecord[]>(STORAGE_KEYS.stamps, SEED_STAMPS)
+  );
+  const [safariSightings, setSafariSightings] = useState<KanjiSightingRecord[]>(() =>
+    readStorage<KanjiSightingRecord[]>(STORAGE_KEYS.safari, [
+      {
+        kanjiId: 'kanji-deguchi',
+        spottedAtCity: 'Tokyo',
+        spottedDate: '2026-11-14',
+        note: 'Spotted at Shibuya Station Hachiko Exit.',
+      },
+    ])
+  );
+  const [packingState, setPackingState] = useState<{
+    checkedIds: string[];
+    customItems: Array<{ id: string; label: string }>;
+  }>(() =>
+    readStorage<{ checkedIds: string[]; customItems: Array<{ id: string; label: string }> }>(
+      STORAGE_KEYS.packing,
+      { checkedIds: ['core-powerbank'], customItems: [] }
+    )
+  );
 
   // Sync theme & dark class on <html>
   useEffect(() => {
@@ -230,6 +283,43 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.supportTickets, JSON.stringify(supportTickets));
   }, [supportTickets]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.weatherCache, JSON.stringify(weatherByCity));
+  }, [weatherByCity]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.stamps, JSON.stringify(stamps));
+  }, [stamps]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.safari, JSON.stringify(safariSightings));
+  }, [safariSightings]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.packing, JSON.stringify(packingState));
+  }, [packingState]);
+
+  // Preload 3-day outlook for active city so Dynamic Packing Checklist always reflects live conditions
+  useEffect(() => {
+    if (weatherByCity[selectedCity.id]) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      lat: String(selectedCity.geoCenter.lat),
+      lng: String(selectedCity.geoCenter.lng),
+      city: selectedCity.id,
+    });
+    fetch(`/api/weather/forecast?${params.toString()}`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.days) && data.days.length > 0) {
+          setWeatherByCity((prev) => ({
+            ...prev,
+            [selectedCity.id]: data as CityWeatherSummary,
+          }));
+        }
+      })
+      .catch(() => {
+        // Non-blocking background sync
+      });
+    return () => controller.abort();
+  }, [selectedCity.id, selectedCity.geoCenter.lat, selectedCity.geoCenter.lng, weatherByCity]);
 
   // Live FX rates bootstrap & refresh
   const handleRefreshRates = async () => {
@@ -413,12 +503,60 @@ export default function App() {
       (err) => handleFirestoreError(err, OperationType.LIST, ticketsPath)
     );
 
+    const stampsPath = `users/${user.uid}/stamps`;
+    const unsubStamps = onSnapshot(
+      query(collection(db, stampsPath), where('ownerUid', '==', user.uid)),
+      (snap) => {
+        if (!snap.empty) {
+          const loaded = snap.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              stampKind: data.stampKind === 'eki' ? 'eki' : 'goshuin',
+              placeName: String(data.placeName || ''),
+              city: String(data.city || 'Tokyo'),
+              stampedDate: String(data.stampedDate || '2026-11-15'),
+              notes: String(data.notes || ''),
+              createdAtLabel: 'Synced',
+            } as StampEntryRecord;
+          });
+          setStamps(loaded);
+        }
+      },
+      (err) => handleFirestoreError(err, OperationType.LIST, stampsPath)
+    );
+
+    const checklistsPath = `users/${user.uid}/checklists`;
+    const unsubChecklists = onSnapshot(
+      query(collection(db, checklistsPath), where('ownerUid', '==', user.uid)),
+      (snap) => {
+        const mainDoc = snap.docs.find((d) => d.id === 'main');
+        if (mainDoc) {
+          const data = mainDoc.data();
+          let customItems: Array<{ id: string; label: string }> = [];
+          try {
+            const parsed = JSON.parse(String(data.customItemsJson || '[]'));
+            if (Array.isArray(parsed)) customItems = parsed;
+          } catch {
+            customItems = [];
+          }
+          setPackingState({
+            checkedIds: Array.isArray(data.checkedIds) ? data.checkedIds.map(String) : [],
+            customItems,
+          });
+        }
+      },
+      (err) => handleFirestoreError(err, OperationType.LIST, checklistsPath)
+    );
+
     return () => {
       unsubExpenses();
       unsubVault();
       unsubReminders();
       unsubPosts();
       unsubTickets();
+      unsubStamps();
+      unsubChecklists();
     };
   }, [authReady, user]);
 
@@ -731,6 +869,124 @@ export default function App() {
     }
   };
 
+  const handleAddStamp = async (
+    stamp: Omit<StampEntryRecord, 'id' | 'createdAtLabel'>
+  ) => {
+    const id = `stamp-${Date.now()}`;
+    const nextRecord: StampEntryRecord = {
+      ...stamp,
+      id,
+      createdAtLabel: user ? 'Synced' : 'Offline Cache',
+    };
+    setStamps((prev) => [nextRecord, ...prev]);
+
+    if (user) {
+      const path = `users/${user.uid}/stamps/${id}`;
+      try {
+        await setDoc(doc(db, `users/${user.uid}/stamps`, id), {
+          ownerUid: user.uid,
+          stampKind: stamp.stampKind,
+          placeName: stamp.placeName.slice(0, 100),
+          city: stamp.city.slice(0, 40),
+          stampedDate: stamp.stampedDate.slice(0, 10),
+          notes: stamp.notes.slice(0, 400),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, path);
+      }
+    }
+  };
+
+  const handleDeleteStamp = async (id: string) => {
+    setStamps((prev) => prev.filter((s) => s.id !== id));
+    if (user) {
+      try {
+        await deleteDoc(doc(db, `users/${user.uid}/stamps`, id));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/stamps/${id}`);
+      }
+    }
+  };
+
+  const persistPackingState = async (next: {
+    checkedIds: string[];
+    customItems: Array<{ id: string; label: string }>;
+  }) => {
+    if (user) {
+      const path = `users/${user.uid}/checklists/main`;
+      try {
+        await setDoc(doc(db, `users/${user.uid}/checklists`, 'main'), {
+          ownerUid: user.uid,
+          checkedIds: next.checkedIds.slice(0, 150),
+          customItemsJson: JSON.stringify(next.customItems).slice(0, 4000),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, path);
+      }
+    }
+  };
+
+  const handleTogglePackingItem = (itemId: string) => {
+    setPackingState((prev) => {
+      const exists = prev.checkedIds.includes(itemId);
+      const next = {
+        ...prev,
+        checkedIds: exists
+          ? prev.checkedIds.filter((id) => id !== itemId)
+          : [...prev.checkedIds, itemId],
+      };
+      persistPackingState(next);
+      return next;
+    });
+  };
+
+  const handleAddPackingCustomItem = (label: string) => {
+    const newItem = { id: `pack-${Date.now()}`, label: label.slice(0, 80) };
+    setPackingState((prev) => {
+      const next = {
+        ...prev,
+        customItems: [...prev.customItems, newItem],
+      };
+      persistPackingState(next);
+      return next;
+    });
+  };
+
+  const handleRemovePackingCustomItem = (id: string) => {
+    setPackingState((prev) => {
+      const next = {
+        checkedIds: prev.checkedIds.filter((cid) => cid !== id),
+        customItems: prev.customItems.filter((item) => item.id !== id),
+      };
+      persistPackingState(next);
+      return next;
+    });
+  };
+
+  const handleLogSafariSighting = (
+    kanjiItem: WildKanjiItem,
+    city: string,
+    note: string
+  ) => {
+    const today = new Date().toISOString().slice(0, 10);
+    setSafariSightings((prev) => {
+      const filtered = prev.filter((s) => s.kanjiId !== kanjiItem.id);
+      return [
+        {
+          kanjiId: kanjiItem.id,
+          spottedAtCity: city,
+          spottedDate: today,
+          note,
+        },
+        ...filtered,
+      ];
+    });
+    handleMasterLearningItem(kanjiItem.id, kanjiItem.xp);
+  };
+
   const navItems: Array<{ id: AppSection; label: string }> = [
     { id: 'explore', label: 'Explore' },
     { id: 'shrine3d', label: '3D Shrine' },
@@ -963,6 +1219,9 @@ export default function App() {
                 selectedCity={selectedCity}
                 onSelectCity={handleSelectCity}
                 onOpen3DShrine={() => handleNavigate('shrine3d')}
+                onWeatherLoaded={(summary) =>
+                  setWeatherByCity((prev) => ({ ...prev, [summary.cityId]: summary }))
+                }
               />
             )}
             {activeSection === 'shrine3d' && (
@@ -975,6 +1234,9 @@ export default function App() {
               <LearningStudioView
                 progress={learningProgress}
                 onMasterItem={handleMasterLearningItem}
+                safariSightings={safariSightings}
+                onLogSafariSighting={handleLogSafariSighting}
+                onSaveVaultItem={handleSaveVaultItem}
               />
             )}
             {activeSection === 'itinerary' && (
@@ -993,6 +1255,12 @@ export default function App() {
                   clearWorkspaceAccessToken();
                   setWorkspaceToken(null);
                 }}
+                weatherSummary={weatherByCity[selectedCity.id] || null}
+                packingCheckedIds={packingState.checkedIds}
+                packingCustomItems={packingState.customItems}
+                onTogglePackingItem={handleTogglePackingItem}
+                onAddPackingCustomItem={handleAddPackingCustomItem}
+                onRemovePackingCustomItem={handleRemovePackingCustomItem}
               />
             )}
             {activeSection === 'budget' && (
@@ -1009,6 +1277,7 @@ export default function App() {
                 rateSnapshot={rateSnapshot}
                 refreshingRates={refreshingRates}
                 onRefreshRates={handleRefreshRates}
+                selectedCityName={selectedCity.id}
               />
             )}
             {activeSection === 'safety' && (
@@ -1031,6 +1300,9 @@ export default function App() {
                   setTotpSecret(sec);
                   setTotpVerified(ver);
                 }}
+                stamps={stamps}
+                onAddStamp={handleAddStamp}
+                onDeleteStamp={handleDeleteStamp}
               />
             )}
             {activeSection === 'support' && (

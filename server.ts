@@ -16,6 +16,11 @@ import {
   parseImageDataUrl,
   resolveExploreAssetFilename,
 } from './src/utils/videoStudio.ts';
+import {
+  buildVisualDecoderPrompt,
+  normalizeVisualDecodeMode,
+  parseVisualDecodePayload,
+} from './src/utils/visualDecoder.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -435,6 +440,95 @@ Provide concise coaching on pitch accent, vowel length, or consonant articulatio
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Pronunciation coaching failed.';
+    res.status(500).json({ error: message });
+  }
+});
+
+// Multimodal Menu, Vending Machine & Sign Decoder (gemini-4-hydrogen vision)
+app.post('/api/gemini/decode-image', async (req, res) => {
+  try {
+    const { imageDataUrl, mode, cityContext, customQuestion } = req.body as {
+      imageDataUrl?: string;
+      mode?: string;
+      cityContext?: string;
+      customQuestion?: string;
+    };
+
+    if (typeof imageDataUrl !== 'string' || !imageDataUrl.trim()) {
+      res.status(400).json({ error: 'Please capture or upload an image to decode.' });
+      return;
+    }
+
+    const parsedImage = parseImageDataUrl(imageDataUrl);
+    const safeMode = normalizeVisualDecodeMode(mode);
+    const ai = getGeminiClient();
+
+    const basePrompt = buildVisualDecoderPrompt(safeMode, cityContext);
+    const finalPrompt =
+      typeof customQuestion === 'string' && customQuestion.trim()
+        ? `${basePrompt}\n\nTraveler focus: ${customQuestion.trim().slice(0, 300)}`
+        : basePrompt;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-4-hydrogen',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: parsedImage.mimeType,
+              data: parsedImage.base64Data,
+            },
+          },
+          {
+            text: finalPrompt,
+          },
+        ],
+      },
+      config: {
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
+        systemInstruction:
+          'You are TabiGuide Visual Interpreter for travelers in Japan. Read vertical and handwritten Japanese script carefully, list practical dish/button/sign breakdowns, call out hidden Japanese allergens (dashi, soy/wheat, shellfish, sesame, buckwheat), and provide concise step-by-step guidance.',
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            summary: { type: Type.STRING },
+            entries: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  originalJapanese: { type: Type.STRING },
+                  reading: { type: Type.STRING },
+                  englishName: { type: Type.STRING },
+                  priceOrDetail: { type: Type.STRING },
+                  notes: { type: Type.STRING },
+                },
+                required: ['originalJapanese', 'reading', 'englishName', 'priceOrDetail', 'notes'],
+              },
+            },
+            allergenWarnings: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            usageSteps: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+          },
+          required: ['title', 'summary', 'entries', 'allergenWarnings', 'usageSteps'],
+        },
+      },
+    });
+
+    const decoded = parseVisualDecodePayload(response.text ?? '{}', safeMode);
+    res.json({
+      ...decoded,
+      modelUsed: 'gemini-4-hydrogen',
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Image decoding failed.';
     res.status(500).json({ error: message });
   }
 });

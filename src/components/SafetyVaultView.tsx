@@ -29,6 +29,10 @@ import {
   verifyTotpCode,
   type EncryptedEnvelope,
 } from '../utils/cryptoVault';
+import {
+  GoshuinPassportPanel,
+  type StampEntryRecord,
+} from './GoshuinPassportPanel';
 
 export interface StoredVaultRecord {
   id: string;
@@ -59,6 +63,9 @@ interface SafetyVaultViewProps {
   totpSecret: string;
   totpVerified: boolean;
   onUpdateTotpState: (secret: string, verified: boolean) => void;
+  stamps: StampEntryRecord[];
+  onAddStamp: (stamp: Omit<StampEntryRecord, 'id' | 'createdAtLabel'>) => Promise<void> | void;
+  onDeleteStamp: (id: string) => Promise<void> | void;
 }
 
 export const SafetyVaultView: React.FC<SafetyVaultViewProps> = ({
@@ -77,6 +84,9 @@ export const SafetyVaultView: React.FC<SafetyVaultViewProps> = ({
   totpSecret,
   totpVerified,
   onUpdateTotpState,
+  stamps,
+  onAddStamp,
+  onDeleteStamp,
 }) => {
   // Reminder form state
   const [remKind, setRemKind] = useState<'shinkansen' | 'flight' | 'ferry' | 'hotel'>('shinkansen');
@@ -607,6 +617,7 @@ export const SafetyVaultView: React.FC<SafetyVaultViewProps> = ({
                   <option value="hotel">Ryokan / Hotel Booking</option>
                   <option value="insurance">Travel Insurance</option>
                   <option value="visa">Visit Japan Web / Visa</option>
+                  <option value="other">Field Notes / Other Record</option>
                 </select>
               </div>
             </div>
@@ -822,6 +833,13 @@ export const SafetyVaultView: React.FC<SafetyVaultViewProps> = ({
           </form>
         </section>
       </div>
+
+      {/* Row 3: Goshuin & Station Eki Stamp Rally Passport */}
+      <GoshuinPassportPanel
+        stamps={stamps}
+        onAddStamp={onAddStamp}
+        onDeleteStamp={onDeleteStamp}
+      />
     </div>
   );
 };

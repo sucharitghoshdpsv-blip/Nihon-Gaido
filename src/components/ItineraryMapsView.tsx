@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   CheckCircle2,
   Download,
@@ -23,6 +23,8 @@ import { JrPassCalculator } from './JrPassCalculator';
 import { LastTrainWidget } from './LastTrainWidget';
 import { PackingChecklistPanel } from './PackingChecklistPanel';
 import type { CityWeatherSummary } from '../utils/weather';
+import { CollapsingCards } from './ui/cue-collapsing-cards-accordion';
+import { buildCityCollapsingCards } from '../utils/collapsingCards';
 
 interface ItineraryMapsViewProps {
   itinerary: ItineraryPlan;
@@ -128,8 +130,56 @@ export const ItineraryMapsView: React.FC<ItineraryMapsViewProps> = ({
 
   const isSelectedCityOffline = offlineCityIds.includes(selectedCity.id);
 
+  const offlinePackCards = useMemo(
+    () =>
+      buildCityCollapsingCards(CITY_GUIDES, { offlineCityIds }).map((card) => ({
+        ...card,
+        ctaLabel: offlineCityIds.includes(card.id) ? 'Remove Pack' : 'Save Offline',
+      })),
+    [offlineCityIds]
+  );
+
   return (
     <div className="space-y-8">
+      {/* Offline Region Visual Directory */}
+      <section aria-label="Offline Region Visual Directory" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-display text-xl font-semibold text-primary-token">
+              Offline Region Guide &amp; Hub Switcher
+            </h2>
+            <p className="text-xs text-muted-token mt-0.5">
+              Select a city hub to sync district pins or cache guide data offline
+            </p>
+          </div>
+          <span className="text-xs font-mono text-accent-token">
+            {offlineCityIds.length} / {CITY_GUIDES.length} Cached Offline
+          </span>
+        </div>
+
+        <CollapsingCards
+          cards={offlinePackCards}
+          activeId={selectedCity.id}
+          heightClassName="h-[260px] sm:h-[290px]"
+          ariaLabel="Offline Region Visual Packs"
+          onSelect={(card) => {
+            const found = CITY_GUIDES.find((c) => c.id === card.id);
+            if (found) {
+              onSelectCity(found);
+              setActiveLandmark(found.landmarks[0]);
+            }
+          }}
+          onAction={(card) => {
+            const found = CITY_GUIDES.find((c) => c.id === card.id);
+            if (found) {
+              onSelectCity(found);
+              setActiveLandmark(found.landmarks[0]);
+              onToggleOfflineCity(found);
+            }
+          }}
+        />
+      </section>
+
       {/* Live Google Maps Platform & Places Explorer */}
       <section className="liquid-glass rounded-2xl p-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

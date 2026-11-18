@@ -5,6 +5,7 @@ import {
   type SurvivalCategory,
 } from '../data/survivalGuideData';
 import { speakJapanese } from '../utils/speech';
+import { LiquidTabs } from './ui/liquid-glass-navbar';
 
 const CATEGORIES: Array<'All' | SurvivalCategory> = [
   'All',
@@ -51,23 +52,13 @@ export const KonbiniPharmacyGuide: React.FC = () => {
       </div>
 
       {/* Category Filter Row */}
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Survival Categories">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setSelectedCat(cat)}
-            aria-pressed={selectedCat === cat}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
-              selectedCat === cat
-                ? 'bg-accent-token'
-                : 'liquid-glass text-secondary-token hover:text-primary-token'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
+      <LiquidTabs
+        items={CATEGORIES.map((cat) => ({ id: cat, label: cat }))}
+        value={selectedCat}
+        onChange={(cat) => setSelectedCat(cat)}
+        ariaLabel="Survival Categories"
+        size="sm"
+      />
 
       {/* Enlarged Show-to-Clerk Banner when selected */}
       {activeShowCard && (

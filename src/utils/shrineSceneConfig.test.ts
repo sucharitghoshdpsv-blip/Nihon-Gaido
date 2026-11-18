@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ARASHIYAMA_CAMERA_PRESETS,
+  ARASHIYAMA_MONUMENTS,
+  GION_CAMERA_PRESETS,
+  GION_MONUMENTS,
   JIGOKUDANI_CAMERA_PRESETS,
   JIGOKUDANI_MONUMENTS,
   SHRINE_BIOMES,
@@ -65,4 +69,40 @@ test('Jigokudani biome includes Winter Twilight blue-white vs amber steam contra
     assert.equal(getCameraPreset(info.cameraPreset, 'jigokudani').id, info.cameraPreset);
   }
 });
+
+test('Arashiyama Bamboo Grove biome includes Misty Morning & Emerald Canopy presets and valid landmarks', () => {
+  const biome = SHRINE_BIOMES.arashiyama;
+  assert.equal(biome.defaultTimeOfDay, 'misty_morning');
+  assert.equal(getCameraPresetsForBiome('arashiyama').length, ARASHIYAMA_CAMERA_PRESETS.length);
+
+  const misty = getAtmospherePreset('misty_morning');
+  const emerald = getAtmospherePreset('emerald_canopy');
+  assert.equal(misty.label, 'Misty Morning');
+  assert.equal(emerald.label, 'Emerald Canopy');
+  assert.ok(misty.keyIntensity > 2.5);
+  assert.ok(emerald.keyIntensity > 2.5);
+
+  for (const key of Object.keys(ARASHIYAMA_MONUMENTS) as Array<keyof typeof ARASHIYAMA_MONUMENTS>) {
+    const info = getMonumentInfo(key);
+    assert.ok(info.etiquetteRule.length > 20);
+    assert.equal(getCameraPreset(info.cameraPreset, 'arashiyama').id, info.cameraPreset);
+  }
+});
+
+test('Gion Tea House biome includes Gion Dusk amber lantern lighting & valid landmarks', () => {
+  const biome = SHRINE_BIOMES.gion;
+  assert.equal(biome.defaultTimeOfDay, 'gion_dusk');
+  assert.equal(getCameraPresetsForBiome('gion').length, GION_CAMERA_PRESETS.length);
+
+  const gionDusk = getAtmospherePreset('gion_dusk');
+  assert.equal(gionDusk.label, 'Gion Dusk');
+  assert.ok(gionDusk.lanternIntensity > 6.5);
+
+  for (const key of Object.keys(GION_MONUMENTS) as Array<keyof typeof GION_MONUMENTS>) {
+    const info = getMonumentInfo(key);
+    assert.ok(info.etiquetteRule.length > 20);
+    assert.equal(getCameraPreset(info.cameraPreset, 'gion').id, info.cameraPreset);
+  }
+});
+
 

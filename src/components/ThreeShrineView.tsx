@@ -10,8 +10,13 @@ import {
   Compass,
   Droplets,
   Eye,
+  Flame,
   Mountain,
   Sparkles,
+  Trees,
+  Volume2,
+  VolumeX,
+  Wind,
 } from 'lucide-react';
 import {
   SHRINE_BIOMES,
@@ -36,6 +41,9 @@ import {
   createShrineTextures,
 } from '../three/shrineModels';
 import { buildJigokudaniBiome } from '../three/jigokudaniModels';
+import { buildArashiyamaBiome } from '../three/arashiyamaModels';
+import { buildGionBiome } from '../three/gionModels';
+import { LiquidTabs } from './ui/liquid-glass-navbar';
 import {
   computeBellShakeOffset,
   createInitialBellPhysicsState,
@@ -51,9 +59,22 @@ import {
   type OnsenRippleSlot,
 } from '../utils/onsenRipple';
 import { playOnsenRippleSound } from '../utils/onsenAudio';
+import {
+  createInitialShishiOdoshiState,
+  stepShishiOdoshiAndWind,
+  triggerWindAndShishiOdoshi,
+  type ShishiOdoshiState,
+} from '../utils/biomeMechanics';
+import {
+  createGionAudioLayer,
+  playBambooWindRustle,
+  playShishiOdoshiKnock,
+  type GionAudioController,
+} from '../utils/biomeAudio';
 
 interface ThreeShrineViewProps {
   selectedCityName: string;
+  initialBiome?: ShrineBiomeId;
   onExit: () => void;
 }
 
@@ -103,39 +124,99 @@ function afterDraw(
   poll();
 }
 
-const KYOTO_LIGHTS: ShrineTimeOfDayId[] = ['dawn', 'dusk', 'night'];
-const JIGOKUDANI_LIGHTS: ShrineTimeOfDayId[] = ['winter_twilight', 'dawn', 'dusk', 'night'];
+const BIOME_LIGHTS: Record<ShrineBiomeId, ShrineTimeOfDayId[]> = {
+  kyoto_shrine: ['dawn', 'dusk', 'night'],
+  jigokudani: ['winter_twilight', 'dawn', 'dusk', 'night'],
+  arashiyama: ['misty_morning', 'emerald_canopy', 'dawn', 'dusk'],
+  gion: ['gion_dusk', 'night', 'dusk'],
+};
+
+function monumentForPreset(presetId: AnyCameraPresetId): AnyMonumentId {
+  switch (presetId) {
+    case 'torii':
+      return 'torii';
+    case 'lantern':
+      return 'lantern';
+    case 'bell':
+      return 'bell';
+    case 'pagoda':
+      return 'pagoda';
+    case 'overview':
+      return 'zen_garden';
+    case 'onsen_pool':
+      return 'onsen_pool';
+    case 'rock_ledge':
+      return 'kakehi_spout';
+    case 'pine_overlook':
+      return 'frost_pines';
+    case 'ravine':
+      return 'volcanic_rock';
+    case 'bamboo_path':
+    case 'bamboo_overlook':
+      return 'bamboo_pathway';
+    case 'canopy_sunbeams':
+      return 'sunlit_canopy';
+    case 'shishi_odoshi':
+      return 'shishi_odoshi';
+    case 'hanamikoji':
+      return 'cobblestone_lane';
+    case 'tea_house':
+    case 'canal_bridge':
+      return 'machiya_teahouse';
+    case 'chochin_eaves':
+      return 'chochin_lanterns';
+    default:
+      return 'torii';
+  }
+}
 
 export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
   selectedCityName,
+  initialBiome = 'kyoto_shrine',
   onExit,
 }) => {
+  const initialBiomeInfo = SHRINE_BIOMES[initialBiome];
+  const initialCam = getCameraPreset(initialBiomeInfo.defaultCameraPreset, initialBiome);
   const canvasMountRef = useRef<HTMLDivElement | null>(null);
-  const [biome, setBiome] = useState<ShrineBiomeId>('kyoto_shrine');
-  const [cameraPreset, setCameraPreset] = useState<AnyCameraPresetId>('overview');
-  const [timeOfDay, setTimeOfDay] = useState<ShrineTimeOfDayId>('dusk');
-  const [activeMonument, setActiveMonument] = useState<AnyMonumentId>('torii');
+  const [biome, setBiome] = useState<ShrineBiomeId>(initialBiome);
+  const [cameraPreset, setCameraPreset] = useState<AnyCameraPresetId>(
+    initialBiomeInfo.defaultCameraPreset
+  );
+  const [timeOfDay, setTimeOfDay] = useState<ShrineTimeOfDayId>(
+    initialBiomeInfo.defaultTimeOfDay
+  );
+  const [activeMonument, setActiveMonument] = useState<AnyMonumentId>(
+    initialBiomeInfo.defaultMonument
+  );
   const [autoSpin, setAutoSpin] = useState(false);
   const [controlsCollapsed, setControlsCollapsed] = useState(false);
   const [bellRingCount, setBellRingCount] = useState(0);
   const [waterRippleCount, setWaterRippleCount] = useState(0);
+  const [arashiyamaWindCount, setArashiyamaWindCount] = useState(0);
+  const [gionLanternsOn, setGionLanternsOn] = useState(true);
+  const [gionAudioOn, setGionAudioOn] = useState(false);
   const [isBellShaking, setIsBellShaking] = useState(false);
 
   // Refs bridging React UI controls into WebGL loop without tearing down the scene
-  const biomeRef = useRef<ShrineBiomeId>('kyoto_shrine');
-  const targetCamPosRef = useRef(new THREE.Vector3(11.5, 6.2, 13.8));
-  const targetLookAtRef = useRef(new THREE.Vector3(0, 2.2, -1.5));
+  const biomeRef = useRef<ShrineBiomeId>(initialBiome);
+  const targetCamPosRef = useRef(new THREE.Vector3(...initialCam.position));
+  const targetLookAtRef = useRef(new THREE.Vector3(...initialCam.target));
   const isLerpingCamRef = useRef(false);
-  const timeOfDayRef = useRef<ShrineTimeOfDayId>('dusk');
+  const timeOfDayRef = useRef<ShrineTimeOfDayId>(initialBiomeInfo.defaultTimeOfDay);
   const autoSpinRef = useRef(false);
   const bellPhysicsRef = useRef<TempleBellPhysicsState>(createInitialBellPhysicsState());
   const isShakingRef = useRef(false);
   const rippleSlotsRef = useRef<OnsenRippleSlot[]>(createInitialRippleSlots());
+  const shishiStateRef = useRef<ShishiOdoshiState>(createInitialShishiOdoshiState());
+  const gionLanternsOnRef = useRef(true);
+  const gionAudioRef = useRef<GionAudioController | null>(null);
   const elapsedRef = useRef(0);
   const steamBurstFnRef = useRef<((x: number, z: number) => void) | null>(null);
   const rippleUploadFnRef = useRef<((slots: OnsenRippleSlot[], elapsed: number) => void) | null>(
     null
   );
+  const arashiyamaSplashFnRef = useRef<(() => void) | null>(null);
+  const immediateRenderFnRef = useRef<((snapCamera?: boolean) => void) | null>(null);
 
   const handleRingBell = () => {
     bellPhysicsRef.current = triggerBellStrike(bellPhysicsRef.current);
@@ -162,7 +243,41 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
   const handleSpawnWaterRippleRef = useRef(handleSpawnWaterRipple);
   handleSpawnWaterRippleRef.current = handleSpawnWaterRipple;
 
-  const immediateRenderFnRef = useRef<(() => void) | null>(null);
+  const handleTriggerArashiyamaWind = () => {
+    shishiStateRef.current = triggerWindAndShishiOdoshi(shishiStateRef.current);
+    arashiyamaSplashFnRef.current?.();
+    playBambooWindRustle();
+    setArashiyamaWindCount((c) => c + 1);
+    setActiveMonument('shishi_odoshi');
+  };
+  const handleTriggerArashiyamaWindRef = useRef(handleTriggerArashiyamaWind);
+  handleTriggerArashiyamaWindRef.current = handleTriggerArashiyamaWind;
+
+  const handleToggleGionLanterns = () => {
+    const next = !gionLanternsOnRef.current;
+    gionLanternsOnRef.current = next;
+    setGionLanternsOn(next);
+    setActiveMonument('chochin_lanterns');
+    immediateRenderFnRef.current?.(false);
+  };
+  const handleToggleGionLanternsRef = useRef(handleToggleGionLanterns);
+  handleToggleGionLanternsRef.current = handleToggleGionLanterns;
+
+  const handleToggleGionAudio = () => {
+    if (!gionAudioRef.current) {
+      gionAudioRef.current = createGionAudioLayer();
+    }
+    if (gionAudioRef.current.isPlaying()) {
+      gionAudioRef.current.stop();
+      setGionAudioOn(false);
+    } else {
+      const started = gionAudioRef.current.start();
+      setGionAudioOn(started);
+      setActiveMonument('cobblestone_lane');
+    }
+  };
+  const handleToggleGionAudioRef = useRef(handleToggleGionAudio);
+  handleToggleGionAudioRef.current = handleToggleGionAudio;
 
   const handleSelectBiome = (nextBiome: ShrineBiomeId) => {
     const info = SHRINE_BIOMES[nextBiome];
@@ -173,13 +288,17 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
     targetLookAtRef.current.set(...preset.target);
     isLerpingCamRef.current = true;
 
+    if (nextBiome !== 'gion' && gionAudioRef.current?.isPlaying()) {
+      gionAudioRef.current.stop();
+      setGionAudioOn(false);
+    }
+
     setBiome(nextBiome);
     setTimeOfDay(info.defaultTimeOfDay);
     setCameraPreset(info.defaultCameraPreset);
     setActiveMonument(info.defaultMonument);
 
     if (nextBiome === 'jigokudani') {
-      // Seed one gentle ambient ripple right on entry so steam & pool look immediately alive
       const seeded = spawnWaterRipple(
         rippleSlotsRef.current,
         -0.4,
@@ -190,7 +309,7 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
       rippleSlotsRef.current = seeded.slots;
       rippleUploadFnRef.current?.(seeded.slots, elapsedRef.current);
     }
-    immediateRenderFnRef.current?.();
+    immediateRenderFnRef.current?.(true);
   };
 
   useEffect(() => {
@@ -199,6 +318,7 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
 
   useEffect(() => {
     timeOfDayRef.current = timeOfDay;
+    immediateRenderFnRef.current?.(false);
   }, [timeOfDay]);
 
   useEffect(() => {
@@ -212,7 +332,7 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
     isLerpingCamRef.current = true;
   }, [cameraPreset, biome]);
 
-  // Keyboard shortcuts: H toggles dock visibility, B rings bell / R ripples onsen, Escape exits
+  // Keyboard shortcuts across all 4 biomes
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (
@@ -235,6 +355,18 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
             (Math.random() - 0.5) * 2.2
           );
         }
+      } else if (e.key === 'w' || e.key === 'W') {
+        if (biomeRef.current === 'arashiyama') {
+          handleTriggerArashiyamaWindRef.current();
+        }
+      } else if (e.key === 'l' || e.key === 'L') {
+        if (biomeRef.current === 'gion') {
+          handleToggleGionLanternsRef.current();
+        }
+      } else if (e.key === 'm' || e.key === 'M') {
+        if (biomeRef.current === 'gion') {
+          handleToggleGionAudioRef.current();
+        }
       } else if (e.key === 'Escape') {
         onExit();
       }
@@ -243,7 +375,7 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onExit]);
 
-  // Main Three.js scene lifecycle (mounts both biomes inside single shared WebGL context)
+  // Main Three.js scene lifecycle (mounts all 4 biomes inside single shared WebGL context)
   useEffect(() => {
     const container = canvasMountRef.current;
     if (!container) return;
@@ -286,9 +418,9 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
     controls.target.set(0, 2.2, -1.5);
     controls.enableDamping = !isSoftwareGl;
     controls.dampingFactor = 0.065;
-    controls.minDistance = 4.2;
+    controls.minDistance = 4.0;
     controls.maxDistance = 32;
-    controls.maxPolarAngle = Math.PI * 0.475;
+    controls.maxPolarAngle = Math.PI * 0.478;
     controls.minPolarAngle = 0.14;
     controls.update();
 
@@ -297,7 +429,7 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
     };
     controls.addEventListener('start', onControlStart);
 
-    // Sky & Atmospheric Lights (shared cleanly between biomes with smooth damping transitions)
+    // Sky & Atmospheric Lights (shared smoothly across biomes)
     const skyDome = buildSkyDome();
     scene.add(skyDome.mesh);
 
@@ -364,12 +496,31 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
     // BIOME 2: Snow-Dusted Jigokudani Hot Spring Ravine (地獄谷)
     // -------------------------------------------------------------------------
     const jigokudani = buildJigokudaniBiome(maxAnisotropy);
-    jigokudani.group.visible = biomeRef.current === 'jigokudani';
-    kyotoGroup.visible = biomeRef.current === 'kyoto_shrine';
     scene.add(jigokudani.group);
-
     steamBurstFnRef.current = jigokudani.spawnSteamBurst;
     rippleUploadFnRef.current = jigokudani.updateRipples;
+
+    // -------------------------------------------------------------------------
+    // BIOME 3: Arashiyama Bamboo Grove (竹林の小径)
+    // -------------------------------------------------------------------------
+    const arashiyama = buildArashiyamaBiome(maxAnisotropy);
+    scene.add(arashiyama.group);
+    arashiyamaSplashFnRef.current = arashiyama.triggerSplash;
+
+    // -------------------------------------------------------------------------
+    // BIOME 4: Gion Historic Tea House District (祇園)
+    // -------------------------------------------------------------------------
+    const gion = buildGionBiome(maxAnisotropy);
+    scene.add(gion.group);
+
+    const syncVisibility = () => {
+      const cur = biomeRef.current;
+      kyotoGroup.visible = cur === 'kyoto_shrine';
+      jigokudani.group.visible = cur === 'jigokudani';
+      arashiyama.group.visible = cur === 'arashiyama';
+      gion.group.visible = cur === 'gion';
+    };
+    syncVisibility();
 
     if (!isSoftwareGl) {
       renderer.compile(scene, camera);
@@ -383,8 +534,18 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
     let downY = 0;
     let lastHoverCheck = 0;
 
-    const getActiveBiomeRoots = () =>
-      biomeRef.current === 'jigokudani' ? [jigokudani.group] : [kyotoGroup];
+    const getActiveBiomeRoots = () => {
+      switch (biomeRef.current) {
+        case 'jigokudani':
+          return [jigokudani.group];
+        case 'arashiyama':
+          return [arashiyama.group];
+        case 'gion':
+          return [gion.group];
+        default:
+          return [kyotoGroup];
+      }
+    };
 
     const onPointerDown = (ev: PointerEvent) => {
       downX = ev.clientX;
@@ -422,6 +583,17 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
         if (monId === 'onsen_pool') {
           handleSpawnWaterRippleRef.current(hit.point.x, hit.point.z);
           return;
+        }
+        if (monId === 'shishi_odoshi') {
+          handleTriggerArashiyamaWindRef.current();
+          return;
+        }
+        if (monId === 'chochin_lanterns') {
+          handleToggleGionLanternsRef.current();
+          return;
+        }
+        if (monId === 'cobblestone_lane') {
+          gionAudioRef.current?.triggerGetaStep();
         }
         if (monId) {
           setActiveMonument(monId);
@@ -471,9 +643,7 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
       elapsed += dt;
       elapsedRef.current = elapsed;
 
-      const isJigokudani = biomeRef.current === 'jigokudani';
-      kyotoGroup.visible = !isJigokudani;
-      jigokudani.group.visible = isJigokudani;
+      syncVisibility();
 
       // Apply atmospheric preset transitions via exponential damping
       const atmo = getAtmospherePreset(timeOfDayRef.current);
@@ -522,7 +692,9 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
       controls.autoRotateSpeed = 0.65;
       controls.update();
 
-      if (isJigokudani) {
+      const curBiome = biomeRef.current;
+
+      if (curBiome === 'jigokudani') {
         jigokudani.updateRipples(rippleSlotsRef.current, elapsed);
         jigokudani.updateFrame(
           dt,
@@ -532,6 +704,32 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
           atmo.amberSteamHex ?? 0xffad4d,
           atmo.particleColorHex
         );
+        if (isShakingRef.current) {
+          isShakingRef.current = false;
+          setIsBellShaking(false);
+        }
+        renderer.render(scene, camera);
+      } else if (curBiome === 'arashiyama') {
+        const shishiStep = stepShishiOdoshiAndWind(shishiStateRef.current, dt);
+        shishiStateRef.current = shishiStep.state;
+        if (shishiStep.didStrikeStone) {
+          arashiyama.triggerSplash();
+          playShishiOdoshiKnock();
+        }
+        arashiyama.updateFrame(
+          dt,
+          elapsed,
+          shishiStep.state,
+          timeOfDayRef.current,
+          atmo.particleColorHex
+        );
+        if (isShakingRef.current) {
+          isShakingRef.current = false;
+          setIsBellShaking(false);
+        }
+        renderer.render(scene, camera);
+      } else if (curBiome === 'gion') {
+        gion.updateFrame(dt, elapsed, gionLanternsOnRef.current, atmo.lanternIntensity);
         if (isShakingRef.current) {
           isShakingRef.current = false;
           setIsBellShaking(false);
@@ -617,11 +815,9 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
       }
     };
 
-    immediateRenderFnRef.current = () => {
+    immediateRenderFnRef.current = (snapCamera = true) => {
       if (disposed) return;
-      const isJig = biomeRef.current === 'jigokudani';
-      kyotoGroup.visible = !isJig;
-      jigokudani.group.visible = isJig;
+      syncVisibility();
       const atmo = getAtmospherePreset(timeOfDayRef.current);
       fog.color.setHex(atmo.fogHex);
       fog.density = atmo.fogDensity;
@@ -634,11 +830,16 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
       keyLight.intensity = atmo.keyIntensity;
       keyLight.position.set(...atmo.keyPosition);
       scene.environmentIntensity = atmo.envIntensity;
-      camera.position.copy(targetCamPosRef.current);
-      controls.target.copy(targetLookAtRef.current);
-      isLerpingCamRef.current = false;
-      controls.update();
-      if (isJig) {
+
+      if (snapCamera) {
+        camera.position.copy(targetCamPosRef.current);
+        controls.target.copy(targetLookAtRef.current);
+        isLerpingCamRef.current = false;
+        controls.update();
+      }
+
+      const cur = biomeRef.current;
+      if (cur === 'jigokudani') {
         jigokudani.updateRipples(rippleSlotsRef.current, elapsedRef.current);
         jigokudani.updateFrame(
           0.016,
@@ -648,6 +849,17 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
           atmo.amberSteamHex ?? 0xff9b38,
           atmo.particleColorHex
         );
+      } else if (cur === 'arashiyama') {
+        arashiyama.updateFrame(
+          0.016,
+          elapsedRef.current,
+          shishiStateRef.current,
+          timeOfDayRef.current,
+          atmo.particleColorHex
+        );
+      } else if (cur === 'gion') {
+        // Use a larger dt step on synchronous toggle so lantern light state reflects immediately on frame 1
+        gion.updateFrame(0.6, elapsedRef.current, gionLanternsOnRef.current, atmo.lanternIntensity);
       }
       renderer.render(scene, camera);
     };
@@ -657,9 +869,11 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
     return () => {
       disposed = true;
       cancelAnimationFrame(rafId);
+      gionAudioRef.current?.stop();
       immediateRenderFnRef.current = null;
       steamBurstFnRef.current = null;
       rippleUploadFnRef.current = null;
+      arashiyamaSplashFnRef.current = null;
       window.removeEventListener('resize', onResize);
       controls.removeEventListener('start', onControlStart);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
@@ -681,6 +895,8 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
 
       Object.values(textures).forEach((tex) => tex.dispose());
       Object.values(jigokudani.textures).forEach((tex) => tex.dispose());
+      Object.values(arashiyama.textures).forEach((tex) => tex.dispose());
+      Object.values(gion.textures).forEach((tex) => tex.dispose());
       envTarget.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === container) {
@@ -692,7 +908,29 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
   const currentBiomeInfo = SHRINE_BIOMES[biome];
   const currentMonument = getMonumentInfo(activeMonument);
   const activeCameraPresets = getCameraPresetsForBiome(biome);
-  const activeLightOptions = biome === 'jigokudani' ? JIGOKUDANI_LIGHTS : KYOTO_LIGHTS;
+  const activeLightOptions = BIOME_LIGHTS[biome];
+
+  const biomeSubtitleHint =
+    biome === 'jigokudani'
+      ? 'Click water surface for ripples & steam · Drag to orbit'
+      : biome === 'arashiyama'
+      ? 'Click Shishi-odoshi or trigger wind · Drag to orbit'
+      : biome === 'gion'
+      ? 'Click chochin eaves to toggle glow · Drag to orbit'
+      : 'Click any landmark or bell · Drag to orbit';
+
+  const formatLightLabel = (tod: ShrineTimeOfDayId) => {
+    const preset = getAtmospherePreset(tod);
+    if (
+      tod === 'winter_twilight' ||
+      tod === 'misty_morning' ||
+      tod === 'emerald_canopy' ||
+      tod === 'gion_dusk'
+    ) {
+      return preset.label;
+    }
+    return tod.charAt(0).toUpperCase() + tod.slice(1);
+  };
 
   return (
     <div
@@ -704,6 +942,9 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
       data-bell-rings={bellRingCount}
       data-bell-shaking={isBellShaking ? 'true' : 'false'}
       data-water-ripples={waterRippleCount}
+      data-wind-triggers={arashiyamaWindCount}
+      data-lantern-glow={gionLanternsOn ? 'true' : 'false'}
+      data-audio-layer={gionAudioOn ? 'true' : 'false'}
     >
       {/* Dedicated WebGL mount container with zero React children */}
       <div ref={canvasMountRef} className="w-full h-full" />
@@ -724,40 +965,32 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
               {currentBiomeInfo.label}
             </p>
             <p className="text-[11px] text-amber-200/75">
-              Context: {selectedCityName} ·{' '}
-              {biome === 'jigokudani'
-                ? 'Click water surface for ripples & steam · Drag to orbit'
-                : 'Click any landmark or bell · Drag to orbit'}
+              Context: {selectedCityName} · {biomeSubtitleHint}
             </p>
           </div>
 
-          {/* Biome Toggle */}
-          <div
-            className="flex items-center gap-1 rounded-lg bg-white/5 p-1 border border-white/10"
-            role="group"
-            aria-label="Select 3D Biome"
-          >
-            {(['kyoto_shrine', 'jigokudani'] as const).map((biomeId) => {
-              const b = SHRINE_BIOMES[biomeId];
-              const isSelected = biome === biomeId;
-              return (
-                <button
-                  key={biomeId}
-                  type="button"
-                  onClick={() => handleSelectBiome(biomeId)}
-                  aria-pressed={isSelected}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
-                    isSelected
-                      ? 'bg-sky-300 text-slate-950'
-                      : 'text-slate-200 hover:bg-white/10'
-                  }`}
-                >
-                  {biomeId === 'jigokudani' && <Mountain className="w-3.5 h-3.5" />}
-                  {b.shortLabel}
-                </button>
-              );
-            })}
-          </div>
+          {/* 4-Biome Switcher */}
+          <LiquidTabs
+            items={(['kyoto_shrine', 'jigokudani', 'arashiyama', 'gion'] as const).map(
+              (biomeId) => ({
+                id: biomeId,
+                label: SHRINE_BIOMES[biomeId].shortLabel,
+                icon:
+                  biomeId === 'jigokudani' ? (
+                    <Mountain className="w-3.5 h-3.5" />
+                  ) : biomeId === 'arashiyama' ? (
+                    <Trees className="w-3.5 h-3.5" />
+                  ) : biomeId === 'gion' ? (
+                    <Flame className="w-3.5 h-3.5" />
+                  ) : undefined,
+              })
+            )}
+            value={biome}
+            onChange={(biomeId) => handleSelectBiome(biomeId)}
+            ariaLabel="Select 3D Biome"
+            size="xs"
+            tone="dark"
+          />
         </div>
 
         <div className="pointer-events-auto max-w-md rounded-xl px-4 py-3 bg-[#0a0e17]/90 border border-amber-300/25 shadow-lg space-y-1">
@@ -785,41 +1018,27 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
             Show Controls (H)
           </button>
         ) : (
-          <div className="pointer-events-auto w-full max-w-5xl rounded-2xl px-4 py-3 bg-[#0a0e17]/92 border border-amber-300/25 shadow-xl flex flex-wrap items-center justify-between gap-3">
+          <div className="pointer-events-auto w-full max-w-6xl rounded-2xl px-4 py-3 bg-[#0a0e17]/92 border border-amber-300/25 shadow-xl flex flex-wrap items-center justify-between gap-3">
             {/* Camera Viewpoints */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[11px] font-medium text-amber-200/75 mr-1 flex items-center gap-1">
                 <Eye className="w-3.5 h-3.5" />
                 View:
               </span>
-              {activeCameraPresets.map((preset) => {
-                const active = cameraPreset === preset.id;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => {
-                      setCameraPreset(preset.id);
-                      if (preset.id === 'torii') setActiveMonument('torii');
-                      else if (preset.id === 'lantern') setActiveMonument('lantern');
-                      else if (preset.id === 'bell') setActiveMonument('bell');
-                      else if (preset.id === 'pagoda') setActiveMonument('pagoda');
-                      else if (preset.id === 'overview') setActiveMonument('zen_garden');
-                      else if (preset.id === 'onsen_pool') setActiveMonument('onsen_pool');
-                      else if (preset.id === 'rock_ledge') setActiveMonument('kakehi_spout');
-                      else if (preset.id === 'pine_overlook') setActiveMonument('frost_pines');
-                      else setActiveMonument('volcanic_rock');
-                    }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      active
-                        ? 'bg-amber-400 text-slate-950 font-semibold'
-                        : 'bg-white/10 text-slate-200 hover:bg-white/15'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                );
-              })}
+              <LiquidTabs
+                items={activeCameraPresets.map((preset) => ({
+                  id: preset.id,
+                  label: preset.label,
+                }))}
+                value={cameraPreset}
+                onChange={(presetId) => {
+                  setCameraPreset(presetId);
+                  setActiveMonument(monumentForPreset(presetId));
+                }}
+                ariaLabel="Camera Viewpoints"
+                size="xs"
+                tone="dark"
+              />
             </div>
 
             {/* Atmosphere / Lighting Preset */}
@@ -828,31 +1047,22 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
                 <Sparkles className="w-3.5 h-3.5" />
                 Light:
               </span>
-              {activeLightOptions.map((tod) => {
-                const active = timeOfDay === tod;
-                const preset = getAtmospherePreset(tod);
-                return (
-                  <button
-                    key={tod}
-                    type="button"
-                    onClick={() => setTimeOfDay(tod)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      active
-                        ? tod === 'winter_twilight'
-                          ? 'bg-sky-300 text-slate-950 font-semibold'
-                          : 'bg-amber-400 text-slate-950 font-semibold'
-                        : 'bg-white/10 text-slate-200 hover:bg-white/15'
-                    }`}
-                  >
-                    {tod === 'winter_twilight' ? preset.label : tod.charAt(0).toUpperCase() + tod.slice(1)}
-                  </button>
-                );
-              })}
+              <LiquidTabs
+                items={activeLightOptions.map((tod) => ({
+                  id: tod,
+                  label: formatLightLabel(tod),
+                }))}
+                value={timeOfDay}
+                onChange={(tod) => setTimeOfDay(tod)}
+                ariaLabel="Atmosphere Lighting Presets"
+                size="xs"
+                tone="dark"
+              />
             </div>
 
-            {/* Primary Biome Action, Orbit & Collapse */}
-            <div className="flex items-center gap-2">
-              {biome === 'jigokudani' ? (
+            {/* Primary Biome Actions, Orbit & Collapse */}
+            <div className="flex flex-wrap items-center gap-2">
+              {biome === 'jigokudani' && (
                 <button
                   type="button"
                   onClick={() =>
@@ -868,7 +1078,59 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
                     {waterRippleCount > 0 ? `Ripple Pool (${waterRippleCount})` : 'Ripple Pool'}
                   </span>
                 </button>
-              ) : (
+              )}
+
+              {biome === 'arashiyama' && (
+                <button
+                  type="button"
+                  onClick={handleTriggerArashiyamaWind}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-300 text-slate-950 hover:bg-emerald-200 transition-colors"
+                >
+                  <Wind className="w-3.5 h-3.5" />
+                  <span>
+                    {arashiyamaWindCount > 0
+                      ? `Wind Audio (${arashiyamaWindCount})`
+                      : 'Wind & Shishi-odoshi'}
+                  </span>
+                </button>
+              )}
+
+              {biome === 'gion' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleToggleGionLanterns}
+                    aria-pressed={gionLanternsOn}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      gionLanternsOn
+                        ? 'bg-amber-400 text-slate-950 hover:bg-amber-300'
+                        : 'bg-white/10 text-slate-200 hover:bg-white/15'
+                    }`}
+                  >
+                    <Flame className="w-3.5 h-3.5" />
+                    <span>{gionLanternsOn ? 'Lantern Glow: On' : 'Lantern Glow: Off'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleToggleGionAudio}
+                    aria-pressed={gionAudioOn}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      gionAudioOn
+                        ? 'bg-rose-300 text-slate-950 hover:bg-rose-200'
+                        : 'bg-white/10 text-slate-200 hover:bg-white/15'
+                    }`}
+                  >
+                    {gionAudioOn ? (
+                      <Volume2 className="w-3.5 h-3.5" />
+                    ) : (
+                      <VolumeX className="w-3.5 h-3.5" />
+                    )}
+                    <span>{gionAudioOn ? 'Audio Layer: On' : 'Audio Layer: Off'}</span>
+                  </button>
+                </>
+              )}
+
+              {biome === 'kyoto_shrine' && (
                 <button
                   type="button"
                   onClick={handleRingBell}
@@ -878,6 +1140,7 @@ export const ThreeShrineView: React.FC<ThreeShrineViewProps> = ({
                   <span>{bellRingCount > 0 ? `Ring Bell (${bellRingCount})` : 'Ring Bell'}</span>
                 </button>
               )}
+
               <button
                 type="button"
                 onClick={() => setAutoSpin((s) => !s)}

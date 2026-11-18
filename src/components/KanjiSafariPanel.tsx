@@ -11,6 +11,7 @@ import {
   type WildKanjiItem,
 } from '../utils/kanjiSafari';
 import type { StoredVaultRecord } from './SafetyVaultView';
+import { LiquidTabs } from './ui/liquid-glass-navbar';
 
 interface KanjiSafariPanelProps {
   sightings: KanjiSightingRecord[];
@@ -212,23 +213,19 @@ export const KanjiSafariPanel: React.FC<KanjiSafariPanelProps> = ({
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Kanji Categories">
-          {(['All', 'Transit', 'Dining', 'Etiquette', 'Shopping'] as const).map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setCategory(cat)}
-              aria-pressed={category === cat}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
-                category === cat
-                  ? 'bg-accent-token'
-                  : 'liquid-glass text-secondary-token hover:text-primary-token'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        <LiquidTabs
+          items={[
+            { id: 'All', label: 'All' },
+            { id: 'Transit', label: 'Transit' },
+            { id: 'Dining', label: 'Dining' },
+            { id: 'Etiquette', label: 'Etiquette' },
+            { id: 'Shopping', label: 'Shopping' },
+          ]}
+          value={category}
+          onChange={(cat) => setCategory(cat)}
+          ariaLabel="Kanji Categories"
+          size="xs"
+        />
       </div>
 
       {/* Wild Kanji Sighting Deck */}

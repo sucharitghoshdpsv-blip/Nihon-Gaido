@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ArrowLeftRight,
-  Compass,
   Loader2,
   MessageSquare,
   Mic,
@@ -11,7 +10,7 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react';
-import { CITY_GUIDES, HERO_IMAGE_URL, type CityGuide } from '../data/japanData';
+import { CITY_GUIDES, type CityGuide } from '../data/japanData';
 import {
   createSpeechRecognizer,
   isSpeechRecognitionSupported,
@@ -19,10 +18,17 @@ import {
 } from '../utils/speech';
 import { evaluatePronunciationMatch, type PronunciationEvaluation } from '../utils/learning';
 import { CityWeatherForecast } from './CityWeatherForecast';
-import { ExploreVideoStudio } from './ExploreVideoStudio';
 import { VisualDecoderPanel } from './VisualDecoderPanel';
 import { KonbiniPharmacyGuide } from './KonbiniPharmacyGuide';
+import { ShadowLensHero } from './ShadowLensHero';
 import type { CityWeatherSummary } from '../utils/weather';
+import type { ShrineBiomeId } from '../utils/shrineSceneConfig';
+import { LiquidTabs } from './ui/liquid-glass-navbar';
+import { CollapsingCards } from './ui/cue-collapsing-cards-accordion';
+import {
+  buildCityCollapsingCards,
+  buildShrineBiomeCollapsingCards,
+} from '../utils/collapsingCards';
 
 interface TranslationResult {
   primaryTranslation: string;
@@ -46,7 +52,7 @@ interface ChatMessage {
 interface ExploreTranslatorViewProps {
   selectedCity: CityGuide;
   onSelectCity: (city: CityGuide) => void;
-  onOpen3DShrine: () => void;
+  onOpen3DShrine: (biomeId?: ShrineBiomeId) => void;
   onWeatherLoaded?: (summary: CityWeatherSummary) => void;
 }
 
@@ -57,15 +63,12 @@ export const ExploreTranslatorView: React.FC<ExploreTranslatorViewProps> = ({
   onWeatherLoaded,
 }) => {
   const [heroImgFailed, setHeroImgFailed] = useState(false);
-  const [failedCityImages, setFailedCityImages] = useState<Record<string, boolean>>({});
-  const [generatedVideos, setGeneratedVideos] = useState<Record<string, string>>({});
 
-  const handleApplyVideoToExplore = (
-    targetKey: 'hero' | CityGuide['id'],
-    videoDataUrl: string
-  ) => {
-    setGeneratedVideos((prev) => ({ ...prev, [targetKey]: videoDataUrl }));
-  };
+  const cityCards = useMemo(
+    () => buildCityCollapsingCards(CITY_GUIDES, { ctaLabel: 'Spotlight' }),
+    []
+  );
+  const biomeCards = useMemo(() => buildShrineBiomeCollapsingCards(), []);
 
   // Translator state
   const [direction, setDirection] = useState<'en-to-ja' | 'ja-to-en'>('en-to-ja');
@@ -274,49 +277,16 @@ export const ExploreTranslatorView: React.FC<ExploreTranslatorViewProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Editorial Hero Split */}
+      {/* Interactive Shadow Lens & Parallax Hero Split */}
       <section className="liquid-glass-elevated rounded-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 items-stretch">
-        <div className="lg:col-span-7 relative min-h-[260px] lg:min-h-[340px] overflow-hidden">
-          {generatedVideos[selectedCity.id] || generatedVideos.hero ? (
-            <video
-              key={generatedVideos[selectedCity.id] || generatedVideos.hero}
-              src={generatedVideos[selectedCity.id] || generatedVideos.hero}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-full object-cover lg:absolute lg:inset-0"
-            />
-          ) : !heroImgFailed ? (
-            <img
-              src={selectedCity.imageUrl || HERO_IMAGE_URL}
-              alt={`${selectedCity.id} ${selectedCity.district}`}
-              referrerPolicy="no-referrer"
-              onError={() => setHeroImgFailed(true)}
-              className="w-full h-full object-cover lg:absolute lg:inset-0"
-            />
-          ) : (
-            <div className="w-full h-full min-h-[260px] bg-gradient-to-br from-slate-900 via-amber-950/50 to-slate-950 flex items-center justify-center p-8">
-              <div className="text-center">
-                <Compass className="w-10 h-10 mx-auto mb-2 text-accent-token" />
-                <p className="font-display text-lg font-semibold text-primary-token">Japan Cultural Atlas</p>
-              </div>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent flex flex-col justify-end p-6 sm:p-8">
-            <p className="text-xs font-medium tracking-wide text-amber-300 mb-1.5">
-              {selectedCity.japaneseName} · {selectedCity.regionLabel} Region
-            </p>
-            <h1 className="font-display text-3xl sm:text-4xl font-bold text-white leading-tight max-w-xl">
-              {selectedCity.headline}
-            </h1>
-            <p className="text-sm text-amber-100/90 mt-2 max-w-xl leading-relaxed">
-              {selectedCity.culturalInsight}
-            </p>
-          </div>
-        </div>
+        <ShadowLensHero
+          selectedCity={selectedCity}
+          heroImgFailed={heroImgFailed}
+          onHeroImgError={() => setHeroImgFailed(true)}
+          onOpen3DShrine={() => onOpen3DShrine()}
+        />
 
-        <div className="lg:col-span-5 p-6 sm:p-7 flex flex-col justify-between gap-6">
+        <div className="lg:col-span-4 p-6 sm:p-7 flex flex-col justify-between gap-6">
           <div>
             <div className="flex items-center justify-between gap-4 mb-3">
               <h2 className="font-display text-lg font-semibold text-primary-token">
@@ -346,79 +316,67 @@ export const ExploreTranslatorView: React.FC<ExploreTranslatorViewProps> = ({
         </div>
       </section>
 
-      {/* City Selector Strip */}
-      <section aria-label="Japan Cities">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-xl font-semibold text-primary-token">
-            Select Destination Context
-          </h2>
-          <span className="text-xs text-muted-token">
-            Switching cities triggers local etiquette briefings
+      {/* City Selector Collapsing Accordion */}
+      <section aria-label="Japan Cities" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-display text-xl font-semibold text-primary-token">
+              Select Destination Context
+            </h2>
+            <p className="text-xs text-muted-token mt-0.5">
+              Hover to preview across regions · click any destination to sync weather, etiquette &amp; concierge
+            </p>
+          </div>
+          <span className="text-xs font-mono text-accent-token">
+            Active: {selectedCity.id} · {selectedCity.japaneseName}
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {CITY_GUIDES.map((city) => {
-            const active = city.id === selectedCity.id;
-            const imgBroken = failedCityImages[city.id];
-            return (
-              <button
-                key={city.id}
-                type="button"
-                onClick={() => onSelectCity(city)}
-                aria-pressed={active}
-                className={`group text-left rounded-xl overflow-hidden transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 ${
-                  active
-                    ? 'liquid-glass-elevated ring-2 ring-[var(--accent)]'
-                    : 'liquid-glass hover:translate-y-[-2px]'
-                }`}
-              >
-                <div className="aspect-[4/3] relative overflow-hidden bg-slate-900">
-                  {generatedVideos[city.id] ? (
-                    <video
-                      key={generatedVideos[city.id]}
-                      src={generatedVideos[city.id]}
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      className="w-full h-full object-cover"
-                    />
-                  ) : !imgBroken ? (
-                    <img
-                      src={city.imageUrl}
-                      alt={`${city.id} ${city.district}`}
-                      referrerPolicy="no-referrer"
-                      onError={() =>
-                        setFailedCityImages((prev) => ({ ...prev, [city.id]: true }))
-                      }
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-950 flex items-center justify-center">
-                      <Compass className="w-6 h-6 text-accent-token" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute bottom-2 left-2.5 right-2.5">
-                    <p className="font-display text-sm font-semibold text-white truncate">
-                      {city.id}
-                    </p>
-                    <p className="text-[11px] text-amber-200/90 truncate">{city.district}</p>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+
+        <CollapsingCards
+          cards={cityCards}
+          activeId={selectedCity.id}
+          heightClassName="h-[310px] sm:h-[340px]"
+          ariaLabel="Select Destination Context"
+          onSelect={(card) => {
+            const found = CITY_GUIDES.find((c) => c.id === card.id);
+            if (found) onSelectCity(found);
+          }}
+          onAction={(card) => {
+            const found = CITY_GUIDES.find((c) => c.id === card.id);
+            if (found) onSelectCity(found);
+            document.getElementById('top')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+        />
       </section>
 
-      {/* 3-Second Motion Video Studio & 3D Shrine Entry */}
-      <ExploreVideoStudio
-        selectedCity={selectedCity}
-        generatedVideos={generatedVideos}
-        onApplyVideoToExplore={handleApplyVideoToExplore}
-        onOpen3DShrine={onOpen3DShrine}
-      />
+      {/* Interactive 3D Japan Biomes Collapsing Accordion */}
+      <section aria-label="Interactive 3D Japan Biomes" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-display text-xl font-semibold text-primary-token">
+              Step Inside Interactive 3D Japan Biomes
+            </h2>
+            <p className="text-xs text-muted-token mt-0.5">
+              Explore live Three.js sanctuaries, onsen ripples, bamboo groves, and dusk tea alleys
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpen3DShrine()}
+            className="text-xs font-semibold text-accent-token hover:underline whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            Open Full 3D Sanctuary →
+          </button>
+        </div>
+
+        <CollapsingCards
+          cards={biomeCards}
+          defaultActiveId="kyoto_shrine"
+          heightClassName="h-[290px] sm:h-[320px]"
+          ariaLabel="Interactive 3D Japan Biomes"
+          onAction={(card) => onOpen3DShrine(card.id as ShrineBiomeId)}
+        />
+      </section>
 
       {/* 3-Day City Weather Outlook */}
       <CityWeatherForecast
@@ -462,20 +420,18 @@ export const ExploreTranslatorView: React.FC<ExploreTranslatorViewProps> = ({
           <form onSubmit={handleTranslate} className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-medium text-muted-token mr-1">Register:</span>
-              {(['polite', 'casual', 'keigo', 'dining'] as const).map((reg) => (
-                <button
-                  key={reg}
-                  type="button"
-                  onClick={() => setRegister(reg)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors whitespace-nowrap shrink-0 ${
-                    register === reg
-                      ? 'bg-accent-token'
-                      : 'liquid-glass text-secondary-token hover:text-primary-token'
-                  }`}
-                >
-                  {reg === 'keigo' ? 'Keigo (Honorific)' : reg}
-                </button>
-              ))}
+              <LiquidTabs
+                items={[
+                  { id: 'polite', label: 'Polite' },
+                  { id: 'casual', label: 'Casual' },
+                  { id: 'keigo', label: 'Keigo (Honorific)' },
+                  { id: 'dining', label: 'Dining' },
+                ]}
+                value={register}
+                onChange={(reg) => setRegister(reg)}
+                ariaLabel="Translation Register"
+                size="xs"
+              />
             </div>
 
             <div>

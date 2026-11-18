@@ -27,6 +27,7 @@ import {
   type SupportTicketSeverity,
   type SupportTicketStatus,
 } from '../utils/support';
+import { LiquidTabs } from './ui/liquid-glass-navbar';
 
 interface CustomerCareViewProps {
   user: User | null;
@@ -399,22 +400,18 @@ export const CustomerCareView: React.FC<CustomerCareViewProps> = ({
                 {openCount} active · {tickets.length} total reported
               </p>
             </div>
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter tickets by status">
-              {(['all', 'open', 'in_review', 'resolved'] as const).map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  onClick={() => setStatusFilter(st)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium capitalize ${
-                    statusFilter === st
-                      ? 'bg-accent-token'
-                      : 'liquid-glass text-secondary-token hover:text-primary-token'
-                  }`}
-                >
-                  {st.replace('_', ' ')}
-                </button>
-              ))}
-            </div>
+            <LiquidTabs
+              items={[
+                { id: 'all', label: 'All' },
+                { id: 'open', label: 'Open' },
+                { id: 'in_review', label: 'In Review' },
+                { id: 'resolved', label: 'Resolved' },
+              ]}
+              value={statusFilter}
+              onChange={(st) => setStatusFilter(st)}
+              ariaLabel="Filter tickets by status"
+              size="xs"
+            />
           </div>
 
           <div className="relative">

@@ -69,6 +69,13 @@ import { ThreeShrineView } from './components/ThreeShrineView';
 import type { CityWeatherSummary } from './utils/weather';
 import type { KanjiSightingRecord, WildKanjiItem } from './utils/kanjiSafari';
 import type { StampEntryRecord } from './components/GoshuinPassportPanel';
+import {
+  JapaneseNavIcons,
+  LiquidNavbar,
+  LiquidTabs,
+  type NimbusFx,
+} from './components/ui/liquid-glass-navbar';
+import type { ShrineBiomeId } from './utils/shrineSceneConfig';
 
 type AppSection = 'explore' | 'shrine3d' | 'learn' | 'itinerary' | 'budget' | 'safety' | 'support';
 
@@ -127,6 +134,7 @@ function readStorage<T>(key: string, fallback: T): T {
 
 export default function App() {
   const [activeSection, setActiveSection] = useState<AppSection>('explore');
+  const [shrineInitialBiome, setShrineInitialBiome] = useState<ShrineBiomeId>('kyoto_shrine');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Theme & Dark mode (default dark gold high contrast)
@@ -245,6 +253,20 @@ export default function App() {
     localStorage.setItem(STORAGE_KEYS.theme, JSON.stringify(themeId));
     localStorage.setItem(STORAGE_KEYS.dark, JSON.stringify(isDarkMode));
   }, [themeId, isDarkMode]);
+
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    return window.matchMedia('(max-width: 767px)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsMobileViewport(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   // Persist local state
   useEffect(() => {
@@ -578,6 +600,16 @@ export default function App() {
   const handleNavigate = (section: AppSection) => {
     setActiveSection(section);
     setEtiquetteVisible(false);
+  };
+
+  const handleOpen3DShrine = (biomeId?: ShrineBiomeId) => {
+    if (biomeId) {
+      setShrineInitialBiome(biomeId);
+    }
+    handleNavigate('shrine3d');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
   };
 
   const handleSignIn = async () => {
@@ -987,15 +1019,24 @@ export default function App() {
     handleMasterLearningItem(kanjiItem.id, kanjiItem.xp);
   };
 
-  const navItems: Array<{ id: AppSection; label: string }> = [
-    { id: 'explore', label: 'Explore' },
-    { id: 'shrine3d', label: '3D Shrine' },
-    { id: 'learn', label: 'Learn' },
-    { id: 'itinerary', label: 'Itinerary' },
-    { id: 'budget', label: 'Budget' },
-    { id: 'safety', label: 'Safety & Vault' },
-    { id: 'support', label: 'Support' },
+  const navItems: Array<{
+    id: AppSection;
+    label: string;
+    icon: React.ReactNode;
+    fx: NimbusFx;
+  }> = [
+    { id: 'explore', label: 'Explore', icon: JapaneseNavIcons.compass, fx: 'spin' },
+    { id: 'shrine3d', label: '3D Shrine', icon: JapaneseNavIcons.torii, fx: 'glow' },
+    { id: 'learn', label: 'Learn', icon: JapaneseNavIcons.kanji, fx: 'pop' },
+    { id: 'itinerary', label: 'Itinerary', icon: JapaneseNavIcons.shinkansen, fx: 'plane' },
+    { id: 'budget', label: 'Budget', icon: JapaneseNavIcons.yen, fx: 'pop' },
+    { id: 'safety', label: 'Safety & Vault', icon: JapaneseNavIcons.omamori, fx: 'wave' },
+    { id: 'support', label: 'Support', icon: JapaneseNavIcons.chochin, fx: 'drop' },
   ];
+  const activeNavIndex = Math.max(
+    0,
+    navItems.findIndex((item) => item.id === activeSection)
+  );
 
   return (
     <div className="min-h-screen flex flex-col relative isolate">
@@ -1022,8 +1063,8 @@ export default function App() {
       )}
 
       {/* Strict 3-Zone Top Bar */}
-      <header className="sticky top-0 z-30 liquid-glass border-b border-black/10 dark:border-amber-200/15">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-8">
+      <header className="sticky top-0 z-40 liquid-glass border-b border-black/10 dark:border-amber-200/15">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4 lg:gap-6">
           {/* Zone 1: Single-line brand wordmark */}
           <a
             href="#top"
@@ -1036,26 +1077,23 @@ export default function App() {
             TabiGuide
           </a>
 
-          {/* Zone 2: Concise single-line nav links */}
-          <nav aria-label="Primary Navigation" className="hidden md:flex items-center gap-6">
-            {navItems.map((item) => {
-              const active = activeSection === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleNavigate(item.id)}
-                  className={`text-sm font-medium transition-colors whitespace-nowrap shrink-0 py-1 border-b-2 ${
-                    active
-                      ? 'text-accent-token border-[var(--accent)]'
-                      : 'text-secondary-token border-transparent hover:text-primary-token'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </nav>
+          {/* Zone 2: Japanese Liquid-Glass Waterline Pill Nav (Desktop / Tablet) */}
+          {!isMobileViewport && (
+            <LiquidNavbar
+              items={navItems}
+              active={activeNavIndex}
+              onChange={(idx) => {
+                const target = navItems[idx];
+                if (target) handleNavigate(target.id);
+              }}
+              tone={isDarkMode ? 'dark' : 'light'}
+              themeId={themeId}
+              responsiveCollapse
+              tooltipPlacement="bottom"
+              sound
+              ariaLabel="Primary Navigation"
+            />
+          )}
 
           {/* Zone 3: 1 Primary Action + Mobile Menu Trigger */}
           <div className="flex items-center gap-3 shrink-0">
@@ -1155,26 +1193,18 @@ export default function App() {
 
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <span className="text-muted-token hidden sm:inline">Theme:</span>
-            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Japanese Themes">
-              {JAPANESE_THEMES.map((t) => {
-                const active = themeId === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setThemeId(t.id)}
-                    aria-pressed={active}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
-                      active
-                        ? 'bg-accent-token'
-                        : 'liquid-glass text-secondary-token hover:text-primary-token'
-                    }`}
-                  >
-                    {t.japaneseName} · {t.name.split(' ')[0]}
-                  </button>
-                );
-              })}
-            </div>
+            <LiquidTabs
+              items={JAPANESE_THEMES.map((t) => ({
+                id: t.id,
+                label: `${t.japaneseName} · ${t.name.split(' ')[0]}`,
+              }))}
+              value={themeId}
+              onChange={(id) => setThemeId(id)}
+              ariaLabel="Japanese Themes"
+              size="xs"
+              tone={isDarkMode ? 'dark' : 'light'}
+              themeId={themeId}
+            />
 
             <button
               type="button"
@@ -1218,7 +1248,7 @@ export default function App() {
               <ExploreTranslatorView
                 selectedCity={selectedCity}
                 onSelectCity={handleSelectCity}
-                onOpen3DShrine={() => handleNavigate('shrine3d')}
+                onOpen3DShrine={handleOpen3DShrine}
                 onWeatherLoaded={(summary) =>
                   setWeatherByCity((prev) => ({ ...prev, [summary.cityId]: summary }))
                 }
@@ -1227,6 +1257,7 @@ export default function App() {
             {activeSection === 'shrine3d' && (
               <ThreeShrineView
                 selectedCityName={selectedCity.id}
+                initialBiome={shrineInitialBiome}
                 onExit={() => handleNavigate('explore')}
               />
             )}
@@ -1321,6 +1352,26 @@ export default function App() {
         </AnimatePresence>
       </main>
 
+      {/* Mobile Floating Liquid-Glass Dock (<768px) */}
+      {isMobileViewport && (
+        <div className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40 max-w-[calc(100vw-16px)]">
+          <LiquidNavbar
+            items={navItems}
+            active={activeNavIndex}
+            onChange={(idx) => {
+              const target = navItems[idx];
+              if (target) handleNavigate(target.id);
+            }}
+            tone={isDarkMode ? 'dark' : 'light'}
+            themeId={themeId}
+            compact
+            tooltipPlacement="top"
+            sound
+            ariaLabel="Mobile Primary Navigation"
+          />
+        </div>
+      )}
+
       {/* Location-Based Etiquette Tip Overlay */}
       <EtiquetteOverlay
         city={selectedCity}
@@ -1328,7 +1379,7 @@ export default function App() {
         onDismiss={() => setEtiquetteVisible(false)}
       />
 
-      <footer className="border-t border-black/10 dark:border-amber-200/15 py-6 mt-8">
+      <footer className="border-t border-black/10 dark:border-amber-200/15 pt-6 pb-24 md:py-6 mt-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-token">
           <span>TabiGuide · Japan Cultural Companion & Encrypted Trip Studio</span>
           <div className="flex flex-wrap items-center gap-4">

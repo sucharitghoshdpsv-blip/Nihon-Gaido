@@ -6,6 +6,7 @@ import {
   LAST_TRAIN_SCHEDULES,
   computeLastTrainCountdown,
 } from '../utils/transitCalculator';
+import { LiquidTabs } from './ui/liquid-glass-navbar';
 
 interface LastTrainWidgetProps {
   selectedCity: CityGuide;
@@ -112,29 +113,17 @@ export const LastTrainWidget: React.FC<LastTrainWidgetProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1" role="group" aria-label="Time Preview Mode">
-          {(
-            [
-              { id: 'live', label: 'Live JST' },
-              { id: '23:25', label: '23:25 Test' },
-              { id: '00:05', label: '00:05 Test' },
-            ] as const
-          ).map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setClockMode(m.id)}
-              aria-pressed={clockMode === m.id}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-medium transition-colors whitespace-nowrap shrink-0 ${
-                clockMode === m.id
-                  ? 'bg-accent-token'
-                  : 'liquid-glass text-secondary-token hover:text-primary-token'
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+        <LiquidTabs
+          items={[
+            { id: 'live', label: 'Live JST' },
+            { id: '23:25', label: '23:25 Test' },
+            { id: '00:05', label: '00:05 Test' },
+          ]}
+          value={clockMode}
+          onChange={(m) => setClockMode(m)}
+          ariaLabel="Time Preview Mode"
+          size="xs"
+        />
       </div>
 
       {/* Neighborhood Picker */}

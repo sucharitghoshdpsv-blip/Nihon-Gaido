@@ -217,34 +217,14 @@ export const CITY_GUIDES: CityGuide[] = [
   },
 ];
 
-export interface KanaItem {
-  id: string;
-  char: string;
-  romaji: string;
-  script: 'Hiragana' | 'Katakana';
-  mnemonic: string;
-}
-
-export const KANA_LESSONS: KanaItem[] = [
-  { id: 'hira-a', char: 'あ', romaji: 'a', script: 'Hiragana', mnemonic: 'Looks like an apple with a leaf stem.' },
-  { id: 'hira-i', char: 'い', romaji: 'i', script: 'Hiragana', mnemonic: 'Two standing eels side by side.' },
-  { id: 'hira-u', char: 'う', romaji: 'u', script: 'Hiragana', mnemonic: 'A curved ear tilted sideways.' },
-  { id: 'hira-e', char: 'え', romaji: 'e', script: 'Hiragana', mnemonic: 'An energetic dancer stepping forward.' },
-  { id: 'hira-o', char: 'お', romaji: 'o', script: 'Hiragana', mnemonic: 'A golf tee and flying ball ("oh!").' },
-  { id: 'hira-ka', char: 'か', romaji: 'ka', script: 'Hiragana', mnemonic: 'A sharp blade cutting with a dot.' },
-  { id: 'hira-ki', char: 'き', romaji: 'ki', script: 'Hiragana', mnemonic: 'Looks just like an antique skeleton key.' },
-  { id: 'hira-sa', char: 'さ', romaji: 'sa', script: 'Hiragana', mnemonic: 'A sad face smiling upside down.' },
-  { id: 'hira-su', char: 'す', romaji: 'su', script: 'Hiragana', mnemonic: 'A looping noodle on chopsticks ("sushi").' },
-  { id: 'hira-ta', char: 'た', romaji: 'ta', script: 'Hiragana', mnemonic: 'Spells "t" and "a" side by side.' },
-  { id: 'hira-no', char: 'の', romaji: 'no', script: 'Hiragana', mnemonic: 'A "No Entry" circular sign.' },
-  { id: 'hira-ma', char: 'ま', romaji: 'ma', script: 'Hiragana', mnemonic: 'A mast with two horizontal sails.' },
-  { id: 'kata-a', char: 'ア', romaji: 'a', script: 'Katakana', mnemonic: 'Sharp axe head swinging down.' },
-  { id: 'kata-ka', char: 'カ', romaji: 'ka', script: 'Katakana', mnemonic: 'Angular twin of hiragana か without the dot.' },
-  { id: 'kata-ko', char: 'コ', romaji: 'ko', script: 'Katakana', mnemonic: 'Two sharp corners of a box.' },
-  { id: 'kata-so', char: 'ソ', romaji: 'so', script: 'Katakana', mnemonic: 'One short tick and a long downward stitch.' },
-  { id: 'kata-ra', char: 'ラ', romaji: 'ra', script: 'Katakana', mnemonic: 'A bowl of ramen with lid floating above.' },
-  { id: 'kata-n', char: 'ン', romaji: 'n', script: 'Katakana', mnemonic: 'Rising upward stroke like a wink.' },
-];
+export {
+  FULL_KANA_DECK as KANA_LESSONS,
+  buildKanaMatrixRows,
+  type KanaItem,
+  type KanaScript,
+  type KanaGroupId,
+  type KanaChartRow,
+} from './kanaDeck';
 
 export interface TravelPhrase {
   id: string;

@@ -7,6 +7,7 @@ import {
   hasTempleOrTatamiStops,
   type PackingChecklistItem,
 } from '../utils/packingChecklist';
+import { LiquidTabs } from './ui/liquid-glass-navbar';
 
 interface PackingChecklistPanelProps {
   cityName: string;
@@ -105,23 +106,18 @@ export const PackingChecklistPanel: React.FC<PackingChecklistPanelProps> = ({
       </div>
 
       {/* Category Filter */}
-      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Packing Categories">
-        {(['All', 'Weather Auto', 'Itinerary Auto', 'Core Japan'] as const).map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setFilterCat(cat)}
-            aria-pressed={filterCat === cat}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
-              filterCat === cat
-                ? 'bg-accent-token'
-                : 'liquid-glass text-secondary-token hover:text-primary-token'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
+      <LiquidTabs
+        items={[
+          { id: 'All', label: 'All' },
+          { id: 'Weather Auto', label: 'Weather Auto' },
+          { id: 'Itinerary Auto', label: 'Itinerary Auto' },
+          { id: 'Core Japan', label: 'Core Japan' },
+        ]}
+        value={filterCat}
+        onChange={(cat) => setFilterCat(cat)}
+        ariaLabel="Packing Categories"
+        size="xs"
+      />
 
       {/* Checklist Rows */}
       <div className="space-y-2 max-h-[290px] overflow-y-auto pr-1">

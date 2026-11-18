@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Check,
   BookOpen,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Eraser,
   Mic,
   PenTool,
@@ -12,6 +15,9 @@ import {
   GRAMMAR_DRILLS,
   KANA_LESSONS,
   TRAVEL_PHRASES,
+  buildKanaMatrixRows,
+  type KanaChartRow,
+  type KanaGroupId,
   type KanaItem,
 } from '../data/japanData';
 import {
@@ -19,6 +25,7 @@ import {
   type LearningProgressState,
   type PronunciationEvaluation,
 } from '../utils/learning';
+import { LiquidTabs } from './ui/liquid-glass-navbar';
 import {
   createSpeechRecognizer,
   isSpeechRecognitionSupported,
@@ -49,6 +56,7 @@ export const LearningStudioView: React.FC<LearningStudioViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<StudioTab>('kana');
   const [scriptFilter, setScriptFilter] = useState<'Hiragana' | 'Katakana'>('Hiragana');
+  const [kanaGroup, setKanaGroup] = useState<KanaGroupId | 'all'>('basic');
   const [selectedKana, setSelectedKana] = useState<KanaItem>(KANA_LESSONS[0]);
   const [phraseFilter, setPhraseFilter] = useState<'All' | 'Dining' | 'Transit' | 'Shopping' | 'Etiquette'>('All');
 
@@ -67,7 +75,16 @@ export const LearningStudioView: React.FC<LearningStudioViewProps> = ({
   const [speakingEval, setSpeakingEval] = useState<PronunciationEvaluation | null>(null);
   const [listening, setListening] = useState(false);
 
-  const visibleKana = KANA_LESSONS.filter((k) => k.script === scriptFilter);
+  const scriptAllKana = KANA_LESSONS.filter((k) => k.script === scriptFilter);
+  const scriptMasteredCount = scriptAllKana.filter((k) =>
+    progress.masteredIds.includes(k.id)
+  ).length;
+  const activeSelectedIdx = Math.max(
+    0,
+    scriptAllKana.findIndex((k) => k.id === selectedKana.id)
+  );
+  const visibleGroups: KanaGroupId[] =
+    kanaGroup === 'all' ? ['basic', 'dakuten', 'yoon'] : [kanaGroup];
   const visiblePhrases =
     phraseFilter === 'All'
       ? TRAVEL_PHRASES
@@ -215,95 +232,182 @@ export const LearningStudioView: React.FC<LearningStudioViewProps> = ({
       </section>
 
       {/* Studio Sub-Navigation */}
-      <div className="flex flex-wrap items-center gap-2">
-        {(
-          [
-            { id: 'kana', label: 'Kana Matrix' },
-            { id: 'phrases', label: 'Travel Phrases' },
-            { id: 'grammar', label: 'Grammar Drills' },
-            { id: 'practice', label: 'Speaking & Writing' },
-            { id: 'safari', label: `Kanji Safari (${safariSightings.length})` },
-          ] as const
-        ).map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap shrink-0 ${
-              activeTab === tab.id
-                ? 'bg-accent-token'
-                : 'liquid-glass text-secondary-token hover:text-primary-token'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <LiquidTabs
+        items={[
+          { id: 'kana', label: 'Kana Matrix' },
+          { id: 'phrases', label: 'Travel Phrases' },
+          { id: 'grammar', label: 'Grammar Drills' },
+          { id: 'practice', label: 'Speaking & Writing' },
+          { id: 'safari', label: `Kanji Safari (${safariSightings.length})` },
+        ]}
+        value={activeTab}
+        onChange={(id) => setActiveTab(id as StudioTab)}
+        ariaLabel="Learning Studio Sections"
+        size="sm"
+      />
 
       {/* Tab 1: Kana Matrix */}
       {activeTab === 'kana' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-7 liquid-glass rounded-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="font-display text-lg font-semibold text-primary-token">
-                {scriptFilter} Character Deck
-              </h2>
-              <div className="flex items-center gap-1 p-1 rounded-lg bg-black/5 dark:bg-black/35">
-                {(['Hiragana', 'Katakana'] as const).map((sc) => (
-                  <button
-                    key={sc}
-                    type="button"
-                    onClick={() => {
-                      setScriptFilter(sc);
-                      const first = KANA_LESSONS.find((k) => k.script === sc);
-                      if (first) setSelectedKana(first);
-                    }}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
-                      scriptFilter === sc
-                        ? 'bg-accent-token'
-                        : 'text-secondary-token hover:text-primary-token'
-                    }`}
-                  >
-                    {sc}
-                  </button>
-                ))}
+          <div className="lg:col-span-7 liquid-glass rounded-2xl p-6 space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="font-display text-lg font-semibold text-primary-token">
+                  Complete {scriptFilter} Chart
+                </h2>
+                <p className="text-xs text-muted-token mt-0.5 tabular-nums">
+                  {scriptMasteredCount} / {scriptAllKana.length} mastered · 46 Gojūon · 25 Dakuten · 33 Yōon
+                </p>
               </div>
+              <LiquidTabs
+                items={[
+                  { id: 'Hiragana', label: 'Hiragana' },
+                  { id: 'Katakana', label: 'Katakana' },
+                ]}
+                value={scriptFilter}
+                onChange={(sc) => {
+                  setScriptFilter(sc);
+                  const targetGroup = kanaGroup === 'all' ? 'basic' : kanaGroup;
+                  const first =
+                    KANA_LESSONS.find((k) => k.script === sc && k.group === targetGroup) ??
+                    KANA_LESSONS.find((k) => k.script === sc);
+                  if (first) setSelectedKana(first);
+                }}
+                ariaLabel="Kana Script"
+                size="xs"
+              />
             </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {visibleKana.map((item) => {
-                const mastered = progress.masteredIds.includes(item.id);
-                const selected = selectedKana.id === item.id;
+            {/* Chart Group Switcher */}
+            <div className="border-b border-black/10 dark:border-amber-200/10 pb-3">
+              <LiquidTabs
+                items={[
+                  { id: 'basic', label: 'Basic Gojūon (46)' },
+                  { id: 'dakuten', label: 'Dakuten & Handakuten (25)' },
+                  { id: 'yoon', label: 'Combo Yōon (33)' },
+                  { id: 'all', label: 'Full Deck (104)' },
+                ]}
+                value={kanaGroup}
+                onChange={(grpId) => {
+                  setKanaGroup(grpId);
+                  if (grpId !== 'all' && selectedKana.group !== grpId) {
+                    const firstInGroup = scriptAllKana.find((k) => k.group === grpId);
+                    if (firstInGroup) setSelectedKana(firstInGroup);
+                  }
+                }}
+                ariaLabel="Kana Chart Groups"
+                size="xs"
+              />
+            </div>
+
+            {/* Aligned Gojūon / Dakuten / Yōon Sections */}
+            <div className="space-y-6">
+              {visibleGroups.map((groupId) => {
+                const rows: KanaChartRow[] = buildKanaMatrixRows(scriptFilter, groupId);
+                const colHeaders =
+                  groupId === 'yoon'
+                    ? ['-ya', '-yu', '-yo']
+                    : ['a', 'i', 'u', 'e', 'o'];
+                const sectionHeading =
+                  groupId === 'basic'
+                    ? 'Gojūon · 46 Fundamental Syllables'
+                    : groupId === 'dakuten'
+                    ? 'Dakuten (゛) & Handakuten (゜) · 25 Voiced Syllables'
+                    : 'Yōon · 33 Contracted Syllables';
+                const gridColsClass =
+                  groupId === 'yoon'
+                    ? 'grid-cols-[2.25rem_repeat(3,minmax(0,1fr))]'
+                    : 'grid-cols-[2rem_repeat(5,minmax(0,1fr))]';
+
                 return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedKana(item);
-                      speakJapanese(item.char);
-                    }}
-                    className={`rounded-xl p-4 text-center transition-all ${
-                      selected
-                        ? 'liquid-glass-elevated ring-2 ring-[var(--accent)]'
-                        : 'liquid-glass hover:border-accent-token'
-                    }`}
-                  >
-                    <div className="text-3xl font-bold text-primary-token mb-1">{item.char}</div>
-                    <div className="text-xs font-mono text-accent-token">{item.romaji}</div>
-                    <div className="text-[11px] text-muted-token mt-1">
-                      {mastered ? 'Mastered' : 'Tap to hear'}
+                  <section key={groupId} className="space-y-2.5" aria-label={sectionHeading}>
+                    <div className="flex items-center justify-between text-xs text-muted-token">
+                      <h3 className="font-semibold text-secondary-token">{sectionHeading}</h3>
                     </div>
-                  </button>
+
+                    {/* Vowel Header */}
+                    <div className={`grid ${gridColsClass} gap-2 items-center text-center text-[11px] font-mono text-muted-token`}>
+                      <span aria-hidden="true" />
+                      {colHeaders.map((col) => (
+                        <span key={col}>{col}</span>
+                      ))}
+                    </div>
+
+                    {/* Syllable Rows */}
+                    <div className="space-y-2">
+                      {rows.map((row) => (
+                        <div
+                          key={row.rowKey}
+                          className={`grid ${gridColsClass} gap-2 items-stretch`}
+                        >
+                          <div className="flex items-center justify-center text-[11px] font-mono font-semibold text-muted-token select-none">
+                            {row.rowLabel}
+                          </div>
+                          {row.cells.map((item, colIdx) => {
+                            if (!item) {
+                              return (
+                                <div
+                                  key={`${row.rowKey}-empty-${colIdx}`}
+                                  aria-hidden="true"
+                                  className="rounded-xl border border-dashed border-black/8 dark:border-amber-200/10 bg-black/[0.02] dark:bg-white/[0.015] min-h-[64px]"
+                                />
+                              );
+                            }
+                            const mastered = progress.masteredIds.includes(item.id);
+                            const selected = selectedKana.id === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                aria-pressed={selected}
+                                aria-label={`${item.char} (${item.romaji})`}
+                                onClick={() => {
+                                  setSelectedKana(item);
+                                  speakJapanese(item.char);
+                                }}
+                                className={`relative rounded-xl py-2.5 px-1.5 text-center transition-all min-h-[64px] flex flex-col items-center justify-center ${
+                                  selected
+                                    ? 'liquid-glass-elevated ring-2 ring-[var(--accent)]'
+                                    : 'liquid-glass hover:border-accent-token'
+                                }`}
+                              >
+                                {mastered && (
+                                  <Check
+                                    aria-label="Mastered"
+                                    className="w-3 h-3 text-accent-token absolute top-1.5 right-1.5"
+                                  />
+                                )}
+                                <div className="text-xl sm:text-2xl font-bold text-primary-token leading-tight">
+                                  {item.char}
+                                </div>
+                                <div className="text-[11px] font-mono text-accent-token mt-0.5">
+                                  {item.romaji}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 );
               })}
             </div>
           </div>
 
-          <div className="lg:col-span-5 liquid-glass rounded-2xl p-6 space-y-5">
-            <div className="flex items-start justify-between">
+          <div className="lg:col-span-5 lg:sticky lg:top-24 liquid-glass rounded-2xl p-6 space-y-5">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs text-muted-token">{selectedKana.script} Focus</p>
-                <div className="flex items-baseline gap-3 mt-1">
+                <p className="text-xs text-muted-token">
+                  {selectedKana.script} Focus ·{' '}
+                  {selectedKana.group === 'basic'
+                    ? 'Gojūon'
+                    : selectedKana.group === 'dakuten'
+                    ? 'Dakuten / Handakuten'
+                    : 'Yōon Combo'}{' '}
+                  · {activeSelectedIdx + 1} / {scriptAllKana.length}
+                </p>
+                <div className="flex items-baseline gap-3 mt-1.5">
                   <span className="text-6xl font-bold text-primary-token">{selectedKana.char}</span>
                   <span className="font-mono text-2xl text-accent-token">/{selectedKana.romaji}/</span>
                 </div>
@@ -312,7 +416,7 @@ export const LearningStudioView: React.FC<LearningStudioViewProps> = ({
                 type="button"
                 aria-label={`Hear ${selectedKana.romaji}`}
                 onClick={() => speakJapanese(selectedKana.char)}
-                className="p-3 rounded-xl liquid-glass text-accent-token hover:border-accent-token"
+                className="p-3 rounded-xl liquid-glass text-accent-token hover:border-accent-token shrink-0"
               >
                 <Volume2 className="w-5 h-5" />
               </button>
@@ -323,7 +427,7 @@ export const LearningStudioView: React.FC<LearningStudioViewProps> = ({
               <p className="text-secondary-token leading-relaxed">{selectedKana.mnemonic}</p>
             </div>
 
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => onMasterItem(selectedKana.id, 25)}
@@ -344,6 +448,44 @@ export const LearningStudioView: React.FC<LearningStudioViewProps> = ({
               >
                 <PenTool className="w-3.5 h-3.5 text-accent-token" />
                 Trace Character
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-black/10 dark:border-amber-200/10">
+              <button
+                type="button"
+                onClick={() => {
+                  const prevIdx =
+                    (activeSelectedIdx - 1 + scriptAllKana.length) % scriptAllKana.length;
+                  const nextItem = scriptAllKana[prevIdx];
+                  if (!nextItem) return;
+                  setSelectedKana(nextItem);
+                  if (kanaGroup !== 'all' && nextItem.group !== kanaGroup) {
+                    setKanaGroup(nextItem.group);
+                  }
+                  speakJapanese(nextItem.char);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium liquid-glass text-secondary-token hover:text-primary-token whitespace-nowrap shrink-0"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const nextIdx = (activeSelectedIdx + 1) % scriptAllKana.length;
+                  const nextItem = scriptAllKana[nextIdx];
+                  if (!nextItem) return;
+                  setSelectedKana(nextItem);
+                  if (kanaGroup !== 'all' && nextItem.group !== kanaGroup) {
+                    setKanaGroup(nextItem.group);
+                  }
+                  speakJapanese(nextItem.char);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium liquid-glass text-secondary-token hover:text-primary-token whitespace-nowrap shrink-0"
+              >
+                Next
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

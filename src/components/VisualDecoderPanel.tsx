@@ -10,6 +10,7 @@ import {
 import type { CityGuide } from '../data/japanData';
 import { speakJapanese } from '../utils/speech';
 import type { VisualDecodeMode, VisualDecodeResponse } from '../utils/visualDecoder';
+import { LiquidTabs } from './ui/liquid-glass-navbar';
 
 interface VisualDecoderPanelProps {
   selectedCity: CityGuide;
@@ -186,23 +187,13 @@ export const VisualDecoderPanel: React.FC<VisualDecoderPanelProps> = ({
       </div>
 
       {/* Mode Selector */}
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Visual Decoder Mode">
-        {MODE_OPTIONS.map((opt) => (
-          <button
-            key={opt.id}
-            type="button"
-            onClick={() => setMode(opt.id)}
-            aria-pressed={mode === opt.id}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
-              mode === opt.id
-                ? 'bg-accent-token'
-                : 'liquid-glass text-secondary-token hover:text-primary-token'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
+      <LiquidTabs
+        items={MODE_OPTIONS.map((opt) => ({ id: opt.id, label: opt.label }))}
+        value={mode}
+        onChange={(id) => setMode(id)}
+        ariaLabel="Visual Decoder Mode"
+        size="sm"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Input & Preview Column */}

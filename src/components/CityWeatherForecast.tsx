@@ -19,6 +19,7 @@ import {
   type TemperatureUnit,
   type WeatherConditionKind,
 } from '../utils/weather';
+import { LiquidTabs } from './ui/liquid-glass-navbar';
 
 interface CityWeatherForecastProps {
   selectedCity: CityGuide;
@@ -129,27 +130,16 @@ export const CityWeatherForecast: React.FC<CityWeatherForecastProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <div
-            className="inline-flex rounded-lg p-0.5 bg-black/5 dark:bg-black/35 border border-black/10 dark:border-amber-200/15"
-            role="group"
-            aria-label="Temperature Unit"
-          >
-            {(['C', 'F'] as const).map((u) => (
-              <button
-                key={u}
-                type="button"
-                onClick={() => setUnit(u)}
-                aria-pressed={unit === u}
-                className={`px-2.5 py-1 rounded-md text-xs font-mono font-semibold transition-colors ${
-                  unit === u
-                    ? 'bg-accent-token'
-                    : 'text-secondary-token hover:text-primary-token'
-                }`}
-              >
-                °{u}
-              </button>
-            ))}
-          </div>
+          <LiquidTabs
+            items={[
+              { id: 'C', label: '°C' },
+              { id: 'F', label: '°F' },
+            ]}
+            value={unit}
+            onChange={(u) => setUnit(u)}
+            ariaLabel="Temperature Unit"
+            size="xs"
+          />
 
           <button
             type="button"

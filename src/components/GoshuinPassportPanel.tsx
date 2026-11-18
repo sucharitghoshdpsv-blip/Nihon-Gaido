@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BookMarked, Plus, Stamp, Trash2 } from 'lucide-react';
 import { CITY_GUIDES } from '../data/japanData';
+import { LiquidTabs } from './ui/liquid-glass-navbar';
 
 export interface StampEntryRecord {
   id: string;
@@ -116,29 +117,17 @@ export const GoshuinPassportPanel: React.FC<GoshuinPassportPanelProps> = ({
 
       {/* Filter Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5" role="group" aria-label="Stamp Type Filter">
-          {(
-            [
-              { id: 'all', label: `All (${stamps.length})` },
-              { id: 'goshuin', label: 'Temple Goshuin' },
-              { id: 'eki', label: 'Station Eki Stamps' },
-            ] as const
-          ).map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFilterKind(f.id)}
-              aria-pressed={filterKind === f.id}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
-                filterKind === f.id
-                  ? 'bg-accent-token'
-                  : 'liquid-glass text-secondary-token hover:text-primary-token'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        <LiquidTabs
+          items={[
+            { id: 'all', label: `All (${stamps.length})` },
+            { id: 'goshuin', label: 'Temple Goshuin' },
+            { id: 'eki', label: 'Station Eki Stamps' },
+          ]}
+          value={filterKind}
+          onChange={(id) => setFilterKind(id)}
+          ariaLabel="Stamp Type Filter"
+          size="xs"
+        />
 
         <div className="flex flex-wrap items-center gap-1.5">
           {STAMP_PRESETS.map((preset) => (

@@ -1,12 +1,38 @@
-export type ShrineBiomeId = 'kyoto_shrine' | 'jigokudani';
+export type ShrineBiomeId = 'kyoto_shrine' | 'jigokudani' | 'arashiyama' | 'gion';
 export type ShrineCameraPresetId = 'overview' | 'torii' | 'lantern' | 'bell' | 'pagoda';
 export type JigokudaniCameraPresetId = 'ravine' | 'onsen_pool' | 'rock_ledge' | 'pine_overlook';
-export type AnyCameraPresetId = ShrineCameraPresetId | JigokudaniCameraPresetId;
+export type ArashiyamaCameraPresetId =
+  | 'bamboo_path'
+  | 'canopy_sunbeams'
+  | 'shishi_odoshi'
+  | 'bamboo_overlook';
+export type GionCameraPresetId = 'hanamikoji' | 'tea_house' | 'chochin_eaves' | 'canal_bridge';
 
-export type ShrineTimeOfDayId = 'dawn' | 'dusk' | 'night' | 'winter_twilight';
+export type AnyCameraPresetId =
+  | ShrineCameraPresetId
+  | JigokudaniCameraPresetId
+  | ArashiyamaCameraPresetId
+  | GionCameraPresetId;
+
+export type ShrineTimeOfDayId =
+  | 'dawn'
+  | 'dusk'
+  | 'night'
+  | 'winter_twilight'
+  | 'misty_morning'
+  | 'emerald_canopy'
+  | 'gion_dusk';
+
 export type ShrineMonumentId = 'torii' | 'lantern' | 'bell' | 'pagoda' | 'zen_garden';
 export type JigokudaniMonumentId = 'onsen_pool' | 'volcanic_rock' | 'frost_pines' | 'kakehi_spout';
-export type AnyMonumentId = ShrineMonumentId | JigokudaniMonumentId;
+export type ArashiyamaMonumentId = 'bamboo_pathway' | 'shishi_odoshi' | 'sunlit_canopy';
+export type GionMonumentId = 'machiya_teahouse' | 'chochin_lanterns' | 'cobblestone_lane';
+
+export type AnyMonumentId =
+  | ShrineMonumentId
+  | JigokudaniMonumentId
+  | ArashiyamaMonumentId
+  | GionMonumentId;
 
 export interface ShrineBiomeInfo {
   id: ShrineBiomeId;
@@ -76,6 +102,26 @@ export const SHRINE_BIOMES: Record<ShrineBiomeId, ShrineBiomeInfo> = {
     defaultCameraPreset: 'ravine',
     defaultMonument: 'onsen_pool',
   },
+  arashiyama: {
+    id: 'arashiyama',
+    label: 'Arashiyama Bamboo Grove',
+    shortLabel: 'Arashiyama Bamboo',
+    japanese: '竹林の小径',
+    subtitle: 'Swaying emerald stalks, sunbeams, stone path & Shishi-odoshi',
+    defaultTimeOfDay: 'misty_morning',
+    defaultCameraPreset: 'bamboo_path',
+    defaultMonument: 'bamboo_pathway',
+  },
+  gion: {
+    id: 'gion',
+    label: 'Gion Historic Tea House District',
+    shortLabel: 'Gion Tea Houses',
+    japanese: '祇園・花見小路',
+    subtitle: 'Dusk machiya alley, chochin lanterns & rain-lit cobblestones',
+    defaultTimeOfDay: 'gion_dusk',
+    defaultCameraPreset: 'hanamikoji',
+    defaultMonument: 'machiya_teahouse',
+  },
 };
 
 export const SHRINE_CAMERA_PRESETS: Array<ShrineCameraPreset & { id: ShrineCameraPresetId }> = [
@@ -137,6 +183,62 @@ export const JIGOKUDANI_CAMERA_PRESETS: Array<
     label: 'Pine Ridge',
     position: [-10.2, 6.2, -6.2],
     target: [0, 0.9, 0.4],
+  },
+];
+
+export const ARASHIYAMA_CAMERA_PRESETS: Array<
+  ShrineCameraPreset & { id: ArashiyamaCameraPresetId }
+> = [
+  {
+    id: 'bamboo_path',
+    label: 'Bamboo Path',
+    position: [0.5, 2.25, 11.8],
+    target: [0, 3.1, -5.0],
+  },
+  {
+    id: 'canopy_sunbeams',
+    label: 'Canopy Shafts',
+    position: [-1.4, 1.4, 6.2],
+    target: [0.8, 6.5, -3.5],
+  },
+  {
+    id: 'shishi_odoshi',
+    label: 'Shishi-odoshi',
+    position: [-0.8, 1.8, 4.6],
+    target: [2.2, 0.9, 1.8],
+  },
+  {
+    id: 'bamboo_overlook',
+    label: 'Grove Edge',
+    position: [5.2, 4.8, 12.8],
+    target: [0, 2.4, -2.0],
+  },
+];
+
+export const GION_CAMERA_PRESETS: Array<ShrineCameraPreset & { id: GionCameraPresetId }> = [
+  {
+    id: 'hanamikoji',
+    label: 'Machiya Alley',
+    position: [0.15, 2.2, 12.4],
+    target: [0, 2.15, -4.5],
+  },
+  {
+    id: 'tea_house',
+    label: 'Tea House',
+    position: [-1.6, 1.95, 5.2],
+    target: [2.8, 1.9, 0.6],
+  },
+  {
+    id: 'chochin_eaves',
+    label: 'Chochin Eaves',
+    position: [1.5, 2.65, 6.4],
+    target: [-2.7, 2.6, 0.2],
+  },
+  {
+    id: 'canal_bridge',
+    label: 'Evening Lane',
+    position: [-0.2, 4.6, -11.4],
+    target: [0, 1.8, 2.5],
   },
 ];
 
@@ -212,6 +314,57 @@ export const SHRINE_ATMOSPHERE_PRESETS: Record<ShrineTimeOfDayId, ShrineAtmosphe
     envIntensity: 0.56,
     particleColorHex: 0xf0f6ff,
     amberSteamHex: 0xff9b38,
+  },
+  misty_morning: {
+    id: 'misty_morning',
+    label: 'Misty Morning',
+    skyTopHex: 0x769c92,
+    skyBottomHex: 0xdfece3,
+    fogHex: 0xc4dbce,
+    fogDensity: 0.021,
+    hemiSkyHex: 0xe9f7ed,
+    hemiGroundHex: 0x243a29,
+    hemiIntensity: 1.28,
+    keyHex: 0xfff2cf,
+    keyIntensity: 2.95,
+    keyPosition: [8, 19, 6],
+    lanternIntensity: 1.8,
+    envIntensity: 0.78,
+    particleColorHex: 0xd9f2c7,
+  },
+  emerald_canopy: {
+    id: 'emerald_canopy',
+    label: 'Emerald Canopy',
+    skyTopHex: 0x0e2a1f,
+    skyBottomHex: 0x5f9c76,
+    fogHex: 0x356148,
+    fogDensity: 0.022,
+    hemiSkyHex: 0x93d9aa,
+    hemiGroundHex: 0x102116,
+    hemiIntensity: 1.02,
+    keyHex: 0xffe49e,
+    keyIntensity: 3.15,
+    keyPosition: [6, 21, 5],
+    lanternIntensity: 2.4,
+    envIntensity: 0.64,
+    particleColorHex: 0xbef29f,
+  },
+  gion_dusk: {
+    id: 'gion_dusk',
+    label: 'Gion Dusk',
+    skyTopHex: 0x0b152c,
+    skyBottomHex: 0x364d7d,
+    fogHex: 0x1a2644,
+    fogDensity: 0.017,
+    hemiSkyHex: 0x738bc4,
+    hemiGroundHex: 0x161218,
+    hemiIntensity: 0.88,
+    keyHex: 0xa7c0f5,
+    keyIntensity: 1.4,
+    keyPosition: [-10, 14, 8],
+    lanternIntensity: 7.8,
+    envIntensity: 0.46,
+    particleColorHex: 0xffb36b,
   },
 };
 
@@ -320,8 +473,89 @@ export const JIGOKUDANI_MONUMENTS: Record<JigokudaniMonumentId, ShrineMonumentIn
   },
 };
 
+export const ARASHIYAMA_MONUMENTS: Record<ArashiyamaMonumentId, ShrineMonumentInfo> = {
+  bamboo_pathway: {
+    id: 'bamboo_pathway',
+    title: 'Arashiyama Bamboo Grove Path',
+    japanese: '竹林の小径',
+    subtitle: 'Emerald bamboo stalks framing a woven takegaki stone trail',
+    etiquetteRule:
+      'Stay along the flagstone path behind woven takegaki bamboo fences—never carve initials into culms or step onto protected root moss.',
+    culturalFact:
+      'Recognized among Japan’s 100 Soundscapes by the Ministry of the Environment for the soothing rustle of swaying bamboo leaves and creaking stalks.',
+    cameraPreset: 'bamboo_path',
+  },
+  shishi_odoshi: {
+    id: 'shishi_odoshi',
+    title: 'Shishi-odoshi Deer Chaser',
+    japanese: '鹿威し',
+    subtitle: 'Counterbalanced hollow bamboo fountain rocking onto river stone',
+    etiquetteRule:
+      'Pause quietly to listen for the slow fill and resonant hollow knock ("kon!")—click the fountain or press Wind Audio to trigger a breeze & rock cycle.',
+    culturalFact:
+      'Originally built to startle wild boar and deer away from mountain crops, its rhythmic hollow clack became a signature motif in Zen temple gardens.',
+    cameraPreset: 'shishi_odoshi',
+  },
+  sunlit_canopy: {
+    id: 'sunlit_canopy',
+    title: 'Emerald Canopy Sunbeams',
+    japanese: '木漏れ日の竹林',
+    subtitle: 'Vertical shafts of morning mist & filtered golden light',
+    etiquetteRule:
+      'Arrive early near sunrise to share the serene quiet of the grove; tripods should remain folded on narrow stretches of the path.',
+    culturalFact:
+      'Segmented bamboo internodes flex smoothly in mountain gusts, opening shifting shafts of golden light across the damp Kyoto granite below.',
+    cameraPreset: 'canopy_sunbeams',
+  },
+};
+
+export const GION_MONUMENTS: Record<GionMonumentId, ShrineMonumentInfo> = {
+  machiya_teahouse: {
+    id: 'machiya_teahouse',
+    title: 'Machiya Ochaya Tea House',
+    japanese: '町家・お茶屋',
+    subtitle: 'Two-story Kyoto cedar townhouses with koshi lattice & shoji screens',
+    etiquetteRule:
+      'Never touch delicate wooden koshi lattice screens or step onto private stone thresholds marked with hanging linen noren curtains.',
+    culturalFact:
+      'Traditional Kyoto machiya use "ichigensan okotowari" (introduction-only) etiquette, where faint shamisen notes drift out from behind warm paper shoji.',
+    cameraPreset: 'tea_house',
+  },
+  chochin_lanterns: {
+    id: 'chochin_lanterns',
+    title: 'Hanging Chochin Paper Lanterns',
+    japanese: '提灯の灯り',
+    subtitle: 'Hand-ribbed bamboo & washi paper lanterns lining timber eaves',
+    etiquetteRule:
+      'Observe photography restrictions strictly on private Gion side alleys and never block passing maiko or geiko along the narrow lane.',
+    culturalFact:
+      'Warm amber chochin and red house crests announce active evening hospitality while reflecting richly across rain-washed flagstones.',
+    cameraPreset: 'chochin_eaves',
+  },
+  cobblestone_lane: {
+    id: 'cobblestone_lane',
+    title: 'Rain-Slick Hanamikoji Cobblestones',
+    japanese: '祇園の石畳',
+    subtitle: 'Granite alley stones catching twilight amber & indigo reflections',
+    etiquetteRule:
+      'Walk calmly to the side in evening rain, keep voices low, and listen to the gentle clack of wooden geta sandals along nearby Shirakawa lanes.',
+    culturalFact:
+      'Shopkeepers sprinkle water ("uchimizu") across storefront flagstones at dusk to settle dust, cool evening air, and invite guests inside.',
+    cameraPreset: 'hanamikoji',
+  },
+};
+
 export function getCameraPresetsForBiome(biome: ShrineBiomeId): ShrineCameraPreset[] {
-  return biome === 'jigokudani' ? JIGOKUDANI_CAMERA_PRESETS : SHRINE_CAMERA_PRESETS;
+  switch (biome) {
+    case 'jigokudani':
+      return JIGOKUDANI_CAMERA_PRESETS;
+    case 'arashiyama':
+      return ARASHIYAMA_CAMERA_PRESETS;
+    case 'gion':
+      return GION_CAMERA_PRESETS;
+    default:
+      return SHRINE_CAMERA_PRESETS;
+  }
 }
 
 export function getCameraPreset(
@@ -340,6 +574,13 @@ export function getMonumentInfo(id: AnyMonumentId): ShrineMonumentInfo {
   if (id in JIGOKUDANI_MONUMENTS) {
     return JIGOKUDANI_MONUMENTS[id as JigokudaniMonumentId];
   }
+  if (id in ARASHIYAMA_MONUMENTS) {
+    return ARASHIYAMA_MONUMENTS[id as ArashiyamaMonumentId];
+  }
+  if (id in GION_MONUMENTS) {
+    return GION_MONUMENTS[id as GionMonumentId];
+  }
   return SHRINE_MONUMENTS[id as ShrineMonumentId] ?? SHRINE_MONUMENTS.torii;
 }
+
 

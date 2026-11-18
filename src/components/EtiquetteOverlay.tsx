@@ -24,7 +24,7 @@ export const EtiquetteOverlay: React.FC<EtiquetteOverlayProps> = ({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -10, scale: 0.98 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className="fixed bottom-4 right-4 left-4 sm:left-auto sm:w-[410px] z-40 liquid-glass-elevated rounded-2xl p-4 sm:p-5"
+          className="fixed bottom-20 md:bottom-4 right-4 left-4 sm:left-auto sm:w-[410px] z-40 liquid-glass-elevated rounded-2xl p-4 sm:p-5"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">

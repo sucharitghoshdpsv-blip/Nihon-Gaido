@@ -1,9 +1,26 @@
+export type ShrineBiomeId = 'kyoto_shrine' | 'jigokudani';
 export type ShrineCameraPresetId = 'overview' | 'torii' | 'lantern' | 'bell' | 'pagoda';
-export type ShrineTimeOfDayId = 'dawn' | 'dusk' | 'night';
+export type JigokudaniCameraPresetId = 'ravine' | 'onsen_pool' | 'rock_ledge' | 'pine_overlook';
+export type AnyCameraPresetId = ShrineCameraPresetId | JigokudaniCameraPresetId;
+
+export type ShrineTimeOfDayId = 'dawn' | 'dusk' | 'night' | 'winter_twilight';
 export type ShrineMonumentId = 'torii' | 'lantern' | 'bell' | 'pagoda' | 'zen_garden';
+export type JigokudaniMonumentId = 'onsen_pool' | 'volcanic_rock' | 'frost_pines' | 'kakehi_spout';
+export type AnyMonumentId = ShrineMonumentId | JigokudaniMonumentId;
+
+export interface ShrineBiomeInfo {
+  id: ShrineBiomeId;
+  label: string;
+  shortLabel: string;
+  japanese: string;
+  subtitle: string;
+  defaultTimeOfDay: ShrineTimeOfDayId;
+  defaultCameraPreset: AnyCameraPresetId;
+  defaultMonument: AnyMonumentId;
+}
 
 export interface ShrineCameraPreset {
-  id: ShrineCameraPresetId;
+  id: AnyCameraPresetId;
   label: string;
   position: [number, number, number];
   target: [number, number, number];
@@ -25,19 +42,43 @@ export interface ShrineAtmospherePreset {
   lanternIntensity: number;
   envIntensity: number;
   particleColorHex: number;
+  amberSteamHex?: number;
 }
 
 export interface ShrineMonumentInfo {
-  id: ShrineMonumentId;
+  id: AnyMonumentId;
   title: string;
   japanese: string;
   subtitle: string;
   etiquetteRule: string;
   culturalFact: string;
-  cameraPreset: ShrineCameraPresetId;
+  cameraPreset: AnyCameraPresetId;
 }
 
-export const SHRINE_CAMERA_PRESETS: ShrineCameraPreset[] = [
+export const SHRINE_BIOMES: Record<ShrineBiomeId, ShrineBiomeInfo> = {
+  kyoto_shrine: {
+    id: 'kyoto_shrine',
+    label: '3D Kyoto Shrine & Zen Courtyard',
+    shortLabel: 'Kyoto Shrine',
+    japanese: '京都神社',
+    subtitle: 'Torii gate, Bonsho bronze bell, stone lanterns & Karesansui gravel',
+    defaultTimeOfDay: 'dusk',
+    defaultCameraPreset: 'overview',
+    defaultMonument: 'torii',
+  },
+  jigokudani: {
+    id: 'jigokudani',
+    label: 'Jigokudani Snow-Dusted Hot Spring',
+    shortLabel: 'Jigokudani Onsen',
+    japanese: '地獄谷温泉',
+    subtitle: 'Volcanic ravine onsen with steaming amber mist & ripple water',
+    defaultTimeOfDay: 'winter_twilight',
+    defaultCameraPreset: 'ravine',
+    defaultMonument: 'onsen_pool',
+  },
+};
+
+export const SHRINE_CAMERA_PRESETS: Array<ShrineCameraPreset & { id: ShrineCameraPresetId }> = [
   {
     id: 'overview',
     label: 'Courtyard',
@@ -70,6 +111,35 @@ export const SHRINE_CAMERA_PRESETS: ShrineCameraPreset[] = [
   },
 ];
 
+export const JIGOKUDANI_CAMERA_PRESETS: Array<
+  ShrineCameraPreset & { id: JigokudaniCameraPresetId }
+> = [
+  {
+    id: 'ravine',
+    label: 'Ravine',
+    position: [10.6, 5.1, 12.6],
+    target: [0, 1.45, -1.6],
+  },
+  {
+    id: 'onsen_pool',
+    label: 'Onsen Pool',
+    position: [0.5, 4.2, 7.6],
+    target: [0, 0.35, -0.2],
+  },
+  {
+    id: 'rock_ledge',
+    label: 'Bamboo Spout',
+    position: [-6.4, 2.6, 5.2],
+    target: [-2.4, 0.9, -1.6],
+  },
+  {
+    id: 'pine_overlook',
+    label: 'Pine Ridge',
+    position: [-10.2, 6.2, -6.2],
+    target: [0, 0.9, 0.4],
+  },
+];
+
 export const SHRINE_ATMOSPHERE_PRESETS: Record<ShrineTimeOfDayId, ShrineAtmospherePreset> = {
   dawn: {
     id: 'dawn',
@@ -87,6 +157,7 @@ export const SHRINE_ATMOSPHERE_PRESETS: Record<ShrineTimeOfDayId, ShrineAtmosphe
     lanternIntensity: 1.6,
     envIntensity: 0.85,
     particleColorHex: 0xffc8dd,
+    amberSteamHex: 0xffc689,
   },
   dusk: {
     id: 'dusk',
@@ -104,6 +175,7 @@ export const SHRINE_ATMOSPHERE_PRESETS: Record<ShrineTimeOfDayId, ShrineAtmosphe
     lanternIntensity: 4.5,
     envIntensity: 0.65,
     particleColorHex: 0xffd1e0,
+    amberSteamHex: 0xffa857,
   },
   night: {
     id: 'night',
@@ -121,6 +193,25 @@ export const SHRINE_ATMOSPHERE_PRESETS: Record<ShrineTimeOfDayId, ShrineAtmosphe
     lanternIntensity: 8.2,
     envIntensity: 0.35,
     particleColorHex: 0xf6c945,
+    amberSteamHex: 0xff9a36,
+  },
+  winter_twilight: {
+    id: 'winter_twilight',
+    label: 'Winter Twilight',
+    skyTopHex: 0x0b1730,
+    skyBottomHex: 0x6288b8,
+    fogHex: 0x2c4466,
+    fogDensity: 0.014,
+    hemiSkyHex: 0xcbe2ff,
+    hemiGroundHex: 0x27364d,
+    hemiIntensity: 1.05,
+    keyHex: 0xdfeeff,
+    keyIntensity: 2.1,
+    keyPosition: [13, 12, 10],
+    lanternIntensity: 7.4,
+    envIntensity: 0.56,
+    particleColorHex: 0xf0f6ff,
+    amberSteamHex: 0xff9b38,
   },
 };
 
@@ -182,14 +273,73 @@ export const SHRINE_MONUMENTS: Record<ShrineMonumentId, ShrineMonumentInfo> = {
   },
 };
 
-export function getCameraPreset(id: ShrineCameraPresetId): ShrineCameraPreset {
-  return SHRINE_CAMERA_PRESETS.find((p) => p.id === id) ?? SHRINE_CAMERA_PRESETS[0];
+export const JIGOKUDANI_MONUMENTS: Record<JigokudaniMonumentId, ShrineMonumentInfo> = {
+  onsen_pool: {
+    id: 'onsen_pool',
+    title: 'Jigokudani Steaming Onsen Pool',
+    japanese: '地獄谷露天風呂',
+    subtitle: 'Natural geothermal mineral spring ringed by basalt stone',
+    etiquetteRule:
+      'Wash and rinse thoroughly before stepping into the mineral bath, keep bath towels folded on top of your head or rim rock—never let fabric touch the hot water—and click the surface to send ripples.',
+    culturalFact:
+      'Fed by deep Nagano volcanic fissures at 41°C, rising steam catches amber lantern light against blue-white snowdrifts.',
+    cameraPreset: 'onsen_pool',
+  },
+  volcanic_rock: {
+    id: 'volcanic_rock',
+    title: 'Basalt Ravine & Snow Ledge',
+    japanese: '安山岩の渓谷',
+    subtitle: 'Dark frost-carved volcanic boulders bordering the spring',
+    etiquetteRule:
+      'Step slowly along heated stone coping ledges; condensed geothermal mist can make surrounding winter boulders slick.',
+    culturalFact:
+      'Jigokudani ("Hell’s Valley") gets its dramatic name from steep basalt cliffs and sulfur-scented vents steaming through deep winter snow.',
+    cameraPreset: 'ravine',
+  },
+  frost_pines: {
+    id: 'frost_pines',
+    title: 'Frost-Tipped Mountain Pines',
+    japanese: '雪化粧の松林',
+    subtitle: 'Subalpine evergreens dusted with twilight snow',
+    etiquetteRule:
+      'Keep voices calm in outdoor rotenburo ravines so bathers and local wildlife share the quiet mountain twilight.',
+    culturalFact:
+      'Dense evergreen canopies trap warm rising vapor around the ravine floor while frost crystals catch silver twilight glow.',
+    cameraPreset: 'pine_overlook',
+  },
+  kakehi_spout: {
+    id: 'kakehi_spout',
+    title: 'Kakehi Bamboo Source Spout',
+    japanese: '懸樋の源泉',
+    subtitle: 'Continuous mountain mineral flow into stone basin',
+    etiquetteRule:
+      'Use the small wooden hinoki bucket beside the rim to ladle cool or warm spring water gently over shoulders before immersing.',
+    culturalFact:
+      'Traditional unchlorinated kakehi bamboo conduits feed fresh geothermal water continuously—allowing overflow steam to warm surrounding rocks.',
+    cameraPreset: 'rock_ledge',
+  },
+};
+
+export function getCameraPresetsForBiome(biome: ShrineBiomeId): ShrineCameraPreset[] {
+  return biome === 'jigokudani' ? JIGOKUDANI_CAMERA_PRESETS : SHRINE_CAMERA_PRESETS;
+}
+
+export function getCameraPreset(
+  id: AnyCameraPresetId,
+  biome: ShrineBiomeId = 'kyoto_shrine'
+): ShrineCameraPreset {
+  const list = getCameraPresetsForBiome(biome);
+  return list.find((p) => p.id === id) ?? list[0];
 }
 
 export function getAtmospherePreset(id: ShrineTimeOfDayId): ShrineAtmospherePreset {
   return SHRINE_ATMOSPHERE_PRESETS[id] ?? SHRINE_ATMOSPHERE_PRESETS.dusk;
 }
 
-export function getMonumentInfo(id: ShrineMonumentId): ShrineMonumentInfo {
-  return SHRINE_MONUMENTS[id] ?? SHRINE_MONUMENTS.torii;
+export function getMonumentInfo(id: AnyMonumentId): ShrineMonumentInfo {
+  if (id in JIGOKUDANI_MONUMENTS) {
+    return JIGOKUDANI_MONUMENTS[id as JigokudaniMonumentId];
+  }
+  return SHRINE_MONUMENTS[id as ShrineMonumentId] ?? SHRINE_MONUMENTS.torii;
 }
+

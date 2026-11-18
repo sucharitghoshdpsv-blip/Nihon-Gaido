@@ -1,10 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  JIGOKUDANI_CAMERA_PRESETS,
+  JIGOKUDANI_MONUMENTS,
+  SHRINE_BIOMES,
   SHRINE_CAMERA_PRESETS,
   SHRINE_MONUMENTS,
   getAtmospherePreset,
   getCameraPreset,
+  getCameraPresetsForBiome,
   getMonumentInfo,
 } from './shrineSceneConfig';
 
@@ -35,3 +39,30 @@ test('SHRINE_MONUMENTS links every interactive zone to etiquette guidance and ca
     assert.equal(getCameraPreset(info.cameraPreset).id, info.cameraPreset);
   }
 });
+
+test('Jigokudani biome includes Winter Twilight blue-white vs amber steam contrast & valid presets', () => {
+  const biome = SHRINE_BIOMES.jigokudani;
+  assert.equal(biome.defaultTimeOfDay, 'winter_twilight');
+  assert.equal(getCameraPresetsForBiome('jigokudani').length, JIGOKUDANI_CAMERA_PRESETS.length);
+
+  const winter = getAtmospherePreset('winter_twilight');
+  assert.equal(winter.label, 'Winter Twilight');
+  assert.ok(winter.lanternIntensity > 5);
+  assert.ok(typeof winter.amberSteamHex === 'number');
+
+  // Blue channel dominant in cool snow sky/hemi fill vs red/amber dominant in steam glow
+  const skyBlue = winter.skyBottomHex & 0xff;
+  const skyRed = (winter.skyBottomHex >> 16) & 0xff;
+  assert.ok(skyBlue > skyRed, 'Winter Twilight sky horizon should be cool blue-white');
+
+  const steamRed = ((winter.amberSteamHex ?? 0) >> 16) & 0xff;
+  const steamBlue = (winter.amberSteamHex ?? 0) & 0xff;
+  assert.ok(steamRed > steamBlue, 'Amber steam warmth tint should be warm orange-amber');
+
+  for (const key of Object.keys(JIGOKUDANI_MONUMENTS) as Array<keyof typeof JIGOKUDANI_MONUMENTS>) {
+    const info = getMonumentInfo(key);
+    assert.ok(info.etiquetteRule.length > 20);
+    assert.equal(getCameraPreset(info.cameraPreset, 'jigokudani').id, info.cameraPreset);
+  }
+});
+
